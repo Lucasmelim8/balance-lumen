@@ -9,27 +9,27 @@ All colors MUST be HSL.
 @layer base {
   :root {
     /* Base colors - Clean modern palette */
-    --background: 245 245 245; /* #f5f5f5 - light gray */
-    --foreground: 12.2 6.5% 12.2%; /* #1f1f1f - dark gray */
+    --background: 0 0% 96%; /* #f5f5f5 - light gray */
+    --foreground: 0 0% 12%; /* #1f1f1f - dark gray */
 
     --card: 0 0% 100%; /* white */
-    --card-foreground: 12.2 6.5% 12.2%;
+    --card-foreground: 0 0% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 12.2 6.5% 12.2%;
+    --popover-foreground: 0 0% 12%;
 
     /* Primary blue #3b82f6 */
     --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 96%;
-    --secondary-foreground: 12.2 6.5% 12.2%;
+    --secondary: 0 0% 94%;
+    --secondary-foreground: 0 0% 12%;
 
-    --muted: 0 0% 96%;
+    --muted: 0 0% 94%;
     --muted-foreground: 0 0% 45%;
 
-    --accent: 0 0% 96%;
-    --accent-foreground: 12.2 6.5% 12.2%;
+    --accent: 0 0% 94%;
+    --accent-foreground: 0 0% 12%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
@@ -47,7 +47,7 @@ All colors MUST be HSL.
     --radius: 0.75rem;
 
     /* Sidebar - Dark theme */
-    --sidebar-background: 12.2 6.5% 12.2%; /* #1f1f1f */
+    --sidebar-background: 0 0% 12%; /* #1f1f1f */
     --sidebar-foreground: 0 0% 100%; /* white */
     --sidebar-primary: 217 91% 60%; /* blue hover */
     --sidebar-primary-foreground: 0 0% 100%;
@@ -69,7 +69,7 @@ All colors MUST be HSL.
   }
 
   .dark {
-    --background: 12.2 6.5% 12.2%; /* Keep dark theme similar */
+    --background: 0 0% 12%; /* Keep dark theme similar */
     --foreground: 0 0% 95%;
 
     --card: 0 0% 8%;
@@ -99,7 +99,7 @@ All colors MUST be HSL.
     --border: 0 0% 15%;
     --input: 0 0% 15%;
     --ring: 217 91% 60%;
-    --sidebar-background: 12.2 6.5% 12.2%;
+    --sidebar-background: 0 0% 12%;
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 217 91% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
