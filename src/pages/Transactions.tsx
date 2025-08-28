@@ -249,18 +249,18 @@ export default function Transactions() {
   };
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Transações</h1>
           <p className="text-muted-foreground">Gerencie suas receitas e despesas</p>
         </div>
-        <Button onClick={handleOpenAddModal}>
+        <Button onClick={handleOpenAddModal} className="bg-gradient-primary">
           <Plus className="mr-2 h-4 w-4" /> Nova Transação
         </Button>
       </div>
 
-      <Card>
+      <Card className="bg-gradient-card shadow-medium">
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Filter className="h-5 w-5" /> Filtros</CardTitle>
         </CardHeader>
@@ -280,7 +280,7 @@ export default function Transactions() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="bg-gradient-card shadow-medium">
         <CardHeader>
           <CardTitle>Lista de Transações</CardTitle>
           <CardDescription>{filteredTransactions.length} transação(ões) encontrada(s)</CardDescription>
@@ -304,18 +304,18 @@ export default function Transactions() {
                   <TableRow key={t.id}>
                     <TableCell className="font-medium">{t.description}<div className="text-xs text-muted-foreground">{getCategoryName(t.categoryId)}</div></TableCell>
                     <TableCell>
-                        {t.paymentType === 'monthly' && <Badge variant="outline" className="border-blue-500 text-blue-500">Mensal</Badge>}
+                        {t.paymentType === 'monthly' && <Badge variant="outline" className="border-primary text-primary">Mensal</Badge>}
                         {t.paymentType === 'recurring' && <Badge variant="outline" className="border-purple-500 text-purple-500">Recorrente</Badge>}
                         {t.paymentType === 'single' && <Badge variant="secondary">Único</Badge>}
                     </TableCell>
                     <TableCell>{getAccountName(t.accountId)}</TableCell>
                     <TableCell>{new Date(t.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</TableCell>
-                    <TableCell><Badge variant={t.type === 'income' ? 'default' : 'destructive'} className={t.type === 'income' ? 'bg-green-500 hover:bg-green-500/80' : ''}>{t.type === 'income' ? 'Receita' : 'Despesa'}</Badge></TableCell>
-                    <TableCell className={`text-right font-semibold ${t.type === 'income' ? 'text-green-500' : 'text-red-500'}`}>{t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}</TableCell>
+                    <TableCell><Badge variant={t.type === 'income' ? 'default' : 'destructive'} className={t.type === 'income' ? 'bg-success hover:bg-success/80' : ''}>{t.type === 'income' ? 'Receita' : 'Despesa'}</Badge></TableCell>
+                    <TableCell className={`text-right font-semibold ${t.type === 'income' ? 'text-success' : 'text-destructive'}`}>{t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleOpenEditModal(t)}><Edit className="h-4 w-4" /></Button>
-                        <Button variant="outline" size="icon" className="h-8 w-8 text-red-500 hover:text-red-500" onClick={() => handleOpenDeleteConfirm(t)}><Trash2 className="h-4 w-4" /></Button>
+                        <Button variant="outline" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleOpenDeleteConfirm(t)}><Trash2 className="h-4 w-4" /></Button>
                       </div>
                     </TableCell>
                   </TableRow>
