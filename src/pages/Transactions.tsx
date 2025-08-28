@@ -1,9 +1,9 @@
-import { useState, useMemo } from 'react';
-import { Plus, Search, Filter, Edit, Trash2, X } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { Plus, Search, Filter, Edit, Trash2, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -47,28 +47,36 @@ const mockCategories = [
 ];
 
 const mockTransactions = [
-  { id: 't1', description: 'Salário Mensal', amount: 7500, date: '2025-08-05', type: 'income', categoryId: 'cat1', accountId: 'acc1', paymentType: 'single' },
-  { id: 't2', description: 'Supermercado', amount: 450.60, date: '2025-08-10', type: 'expense', categoryId: 'cat2', accountId: 'acc2', paymentType: 'monthly' },
-  { id: 't3', description: 'Uber para o trabalho', amount: 25.50, date: '2025-08-11', type: 'expense', categoryId: 'cat3', accountId: 'acc2', paymentType: 'single' },
-  { id: 't4', description: 'Cinema', amount: 60.00, date: '2025-08-12', type: 'expense', categoryId: 'cat4', accountId: 'acc1', paymentType: 'single' },
-  { id: 't5', description: 'Netflix', amount: 39.90, date: '2025-07-15', type: 'expense', categoryId: 'cat5', accountId: 'acc2', paymentType: 'recurring' },
-  { id: 't6', description: 'Salário Mensal', amount: 7500, date: '2025-07-05', type: 'income', categoryId: 'cat1', accountId: 'acc1', paymentType: 'single' },
+    // Preenchendo com mais dados para testar a paginação
+    { id: 't1', description: 'Salário Mensal', amount: 7500, date: '2025-08-05', type: 'income', categoryId: 'cat1', accountId: 'acc1', paymentType: 'single' },
+    { id: 't2', description: 'Supermercado', amount: 450.60, date: '2025-08-10', type: 'expense', categoryId: 'cat2', accountId: 'acc2', paymentType: 'monthly' },
+    { id: 't3', description: 'Uber para o trabalho', amount: 25.50, date: '2025-08-11', type: 'expense', categoryId: 'cat3', accountId: 'acc2', paymentType: 'single' },
+    { id: 't4', description: 'Cinema', amount: 60.00, date: '2025-08-12', type: 'expense', categoryId: 'cat4', accountId: 'acc1', paymentType: 'single' },
+    { id: 't5', description: 'Netflix', amount: 39.90, date: '2025-07-15', type: 'expense', categoryId: 'cat5', accountId: 'acc2', paymentType: 'recurring' },
+    { id: 't6', description: 'Salário Mensal', amount: 7500, date: '2025-07-05', type: 'income', categoryId: 'cat1', accountId: 'acc1', paymentType: 'single' },
+    { id: 't7', description: 'Almoço', amount: 35.00, date: '2025-08-15', type: 'expense', categoryId: 'cat2', accountId: 'acc1', paymentType: 'single' },
+    { id: 't8', description: 'Spotify', amount: 21.90, date: '2025-08-01', type: 'expense', categoryId: 'cat5', accountId: 'acc2', paymentType: 'recurring' },
+    { id: 't9', description: 'Gasolina', amount: 150.00, date: '2025-08-08', type: 'expense', categoryId: 'cat3', accountId: 'acc1', paymentType: 'single' },
+    { id: 't10', description: 'Freelance', amount: 1200, date: '2025-08-20', type: 'income', categoryId: 'cat1', accountId: 'acc1', paymentType: 'single' },
+    { id: 't11', description: 'Academia', amount: 99.90, date: '2025-08-05', type: 'expense', categoryId: 'cat4', accountId: 'acc2', paymentType: 'monthly' },
+    { id: 't12', description: 'Farmácia', amount: 75.25, date: '2025-08-22', type: 'expense', categoryId: 'cat2', accountId: 'acc1', paymentType: 'single' },
 ];
+
 
 const useFinanceStore = () => {
   const [transactions, setTransactions] = useState(mockTransactions);
   const [accounts] = useState(mockAccounts);
   const [categories] = useState(mockCategories);
 
-  const addTransaction = (transaction: any) => {
+  const addTransaction = (transaction) => {
     setTransactions(prev => [...prev, transaction].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
   };
 
-  const updateTransaction = (updatedTransaction: any) => {
+  const updateTransaction = (updatedTransaction) => {
     setTransactions(prev => prev.map(t => t.id === updatedTransaction.id ? updatedTransaction : t));
   };
 
-  const removeTransaction = (id: string) => {
+  const removeTransaction = (id) => {
     setTransactions(prev => prev.filter(t => t.id !== id));
   };
 
@@ -99,17 +107,17 @@ export default function Transactions() {
 
   // Estados dos filtros
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
-  const [filterCategory, setFilterCategory] = useState<string>('all');
-  const [filterAccount, setFilterAccount] = useState<string>('all');
-  const [filterMonth, setFilterMonth] = useState<string>('all');
-  const [filterYear, setFilterYear] = useState<string>('all');
+  const [filterType, setFilterType] = useState('all');
+  const [filterCategory, setFilterCategory] = useState('all');
+  const [filterAccount, setFilterAccount] = useState('all');
+  const [filterMonth, setFilterMonth] = useState('all');
+  const [filterYear, setFilterYear] = useState('all');
 
   // Estados do modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
-  const [currentTransaction, setCurrentTransaction] = useState<any | null>(null);
-  const [transactionFormData, setTransactionFormData] = useState<TransactionFormData>({
+  const [currentTransaction, setCurrentTransaction] = useState(null);
+  const [transactionFormData, setTransactionFormData] = useState({
     description: '',
     amount: 0,
     date: new Date().toISOString().split('T')[0],
@@ -120,13 +128,17 @@ export default function Transactions() {
     isRecurring: false,
   });
 
+  // Estados da paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+
   const { months, years } = useMemo(() => {
     const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
     const uniqueYears = [...new Set(transactions.map(t => new Date(t.date).getFullYear()))].sort((a, b) => b - a);
     return { months: monthNames, years: uniqueYears };
   }, [transactions]);
 
-  const filteredTransactions = transactions.filter((transaction) => {
+  const filteredTransactions = useMemo(() => transactions.filter((transaction) => {
     const transactionDate = new Date(transaction.date);
     const matchesSearch = transaction.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = filterType === 'all' || transaction.type === filterType;
@@ -135,18 +147,26 @@ export default function Transactions() {
     const matchesMonth = filterMonth === 'all' || transactionDate.getMonth() === parseInt(filterMonth);
     const matchesYear = filterYear === 'all' || transactionDate.getFullYear() === parseInt(filterYear);
     return matchesSearch && matchesType && matchesCategory && matchesAccount && matchesMonth && matchesYear;
-  });
+  }), [transactions, searchTerm, filterType, filterCategory, filterAccount, filterMonth, filterYear]);
 
-  const formatCurrency = (amount: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount);
-  const getCategoryName = (categoryId: string) => categories.find(c => c.id === categoryId)?.name || 'N/A';
-  const getAccountName = (accountId: string) => accounts.find(a => a.id === accountId)?.name || 'N/A';
-  const getPaymentTypeName = (type: string) => {
-    switch (type) {
-      case 'monthly': return 'Mensal';
-      case 'recurring': return 'Recorrente';
-      default: return 'Único';
-    }
-  };
+  // Lógica de paginação
+  const paginatedTransactions = useMemo(() => {
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    return filteredTransactions.slice(startIndex, endIndex);
+  }, [filteredTransactions, currentPage, rowsPerPage]);
+
+  const totalPages = Math.ceil(filteredTransactions.length / rowsPerPage);
+  
+  // Efeito para resetar a página ao mudar os filtros
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterType, filterCategory, filterAccount, filterMonth, filterYear, rowsPerPage]);
+
+
+  const formatCurrency = (amount) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount);
+  const getCategoryName = (categoryId) => categories.find(c => c.id === categoryId)?.name || 'N/A';
+  const getAccountName = (accountId) => accounts.find(a => a.id === accountId)?.name || 'N/A';
 
   const handleClearFilters = () => {
     setSearchTerm('');
@@ -157,16 +177,16 @@ export default function Transactions() {
     setFilterYear('all');
   };
 
-  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFormChange = (e) => {
     const { name, value, type } = e.target;
     setTransactionFormData(prev => ({ ...prev, [name]: type === 'number' ? parseFloat(value) : value }));
   };
 
-  const handleSelectChange = (name: keyof Omit<TransactionFormData, 'isMonthly' | 'isRecurring'>, value: string) => {
-    setTransactionFormData(prev => ({ ...prev, [name]: value as any }));
+  const handleSelectChange = (name, value) => {
+    setTransactionFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleCheckboxChange = (name: 'isMonthly' | 'isRecurring', checked: boolean) => {
+  const handleCheckboxChange = (name, checked) => {
     setTransactionFormData(prev => ({
       ...prev,
       isMonthly: name === 'isMonthly' ? checked : (checked ? false : prev.isMonthly),
@@ -183,7 +203,7 @@ export default function Transactions() {
     setIsModalOpen(true);
   };
 
-  const handleOpenEditModal = (transaction: any) => {
+  const handleOpenEditModal = (transaction) => {
     setCurrentTransaction(transaction);
     setTransactionFormData({
       description: transaction.description, amount: transaction.amount,
@@ -217,7 +237,7 @@ export default function Transactions() {
     setIsModalOpen(false);
   };
 
-  const handleOpenDeleteConfirm = (transaction: any) => {
+  const handleOpenDeleteConfirm = (transaction) => {
     setCurrentTransaction(transaction);
     setIsDeleteConfirmOpen(true);
   };
@@ -229,18 +249,18 @@ export default function Transactions() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4 md:p-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Transações</h1>
           <p className="text-muted-foreground">Gerencie suas receitas e despesas</p>
         </div>
-        <Button onClick={handleOpenAddModal} className="bg-gradient-primary">
+        <Button onClick={handleOpenAddModal}>
           <Plus className="mr-2 h-4 w-4" /> Nova Transação
         </Button>
       </div>
 
-      <Card className="bg-gradient-card shadow-medium">
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Filter className="h-5 w-5" /> Filtros</CardTitle>
         </CardHeader>
@@ -251,7 +271,7 @@ export default function Transactions() {
               <Search className="absolute left-3 top-1/2 transform translate-y-1/4 h-4 w-4 text-muted-foreground" />
               <Input placeholder="Buscar por descrição..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
             </div>
-            <div className="flex flex-col gap-1.5"><Label>Tipo</Label><Select value={filterType} onValueChange={(v: any) => setFilterType(v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem><SelectItem value="income">Receitas</SelectItem><SelectItem value="expense">Despesas</SelectItem></SelectContent></Select></div>
+            <div className="flex flex-col gap-1.5"><Label>Tipo</Label><Select value={filterType} onValueChange={(v) => setFilterType(v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem><SelectItem value="income">Receitas</SelectItem><SelectItem value="expense">Despesas</SelectItem></SelectContent></Select></div>
             <div className="flex flex-col gap-1.5"><Label>Categoria</Label><Select value={filterCategory} onValueChange={setFilterCategory}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todas</SelectItem>{categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent></Select></div>
             <div className="flex flex-col gap-1.5"><Label>Mês</Label><Select value={filterMonth} onValueChange={setFilterMonth}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{months.map((m, i) => <SelectItem key={i} value={i.toString()}>{m}</SelectItem>)}</SelectContent></Select></div>
             <div className="flex flex-col gap-1.5"><Label>Ano</Label><Select value={filterYear} onValueChange={setFilterYear}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent></Select></div>
@@ -260,13 +280,13 @@ export default function Transactions() {
         </CardContent>
       </Card>
 
-      <Card className="bg-gradient-card shadow-medium">
+      <Card>
         <CardHeader>
           <CardTitle>Lista de Transações</CardTitle>
           <CardDescription>{filteredTransactions.length} transação(ões) encontrada(s)</CardDescription>
         </CardHeader>
         <CardContent>
-          {filteredTransactions.length > 0 ? (
+          {paginatedTransactions.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -280,18 +300,22 @@ export default function Transactions() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredTransactions.map((t) => (
+                {paginatedTransactions.map((t) => (
                   <TableRow key={t.id}>
                     <TableCell className="font-medium">{t.description}<div className="text-xs text-muted-foreground">{getCategoryName(t.categoryId)}</div></TableCell>
-                    <TableCell><Badge variant="secondary">{getPaymentTypeName(t.paymentType)}</Badge></TableCell>
+                    <TableCell>
+                        {t.paymentType === 'monthly' && <Badge variant="outline" className="border-blue-500 text-blue-500">Mensal</Badge>}
+                        {t.paymentType === 'recurring' && <Badge variant="outline" className="border-purple-500 text-purple-500">Recorrente</Badge>}
+                        {t.paymentType === 'single' && <Badge variant="secondary">Único</Badge>}
+                    </TableCell>
                     <TableCell>{getAccountName(t.accountId)}</TableCell>
                     <TableCell>{new Date(t.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</TableCell>
-                    <TableCell><Badge variant={t.type === 'income' ? 'default' : 'destructive'} className={t.type === 'income' ? 'bg-success hover:bg-success/80' : ''}>{t.type === 'income' ? 'Receita' : 'Despesa'}</Badge></TableCell>
-                    <TableCell className={`text-right font-semibold ${t.type === 'income' ? 'text-success' : 'text-destructive'}`}>{t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}</TableCell>
+                    <TableCell><Badge variant={t.type === 'income' ? 'default' : 'destructive'} className={t.type === 'income' ? 'bg-green-500 hover:bg-green-500/80' : ''}>{t.type === 'income' ? 'Receita' : 'Despesa'}</Badge></TableCell>
+                    <TableCell className={`text-right font-semibold ${t.type === 'income' ? 'text-green-500' : 'text-red-500'}`}>{t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleOpenEditModal(t)}><Edit className="h-4 w-4" /></Button>
-                        <Button variant="outline" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleOpenDeleteConfirm(t)}><Trash2 className="h-4 w-4" /></Button>
+                        <Button variant="outline" size="icon" className="h-8 w-8 text-red-500 hover:text-red-500" onClick={() => handleOpenDeleteConfirm(t)}><Trash2 className="h-4 w-4" /></Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -305,6 +329,53 @@ export default function Transactions() {
             </div>
           )}
         </CardContent>
+        {totalPages > 1 && (
+            <CardFooter>
+                <div className="flex items-center justify-between w-full text-sm text-muted-foreground">
+                    <div>
+                        Mostrando {Math.min((currentPage - 1) * rowsPerPage + 1, filteredTransactions.length)} a {Math.min(currentPage * rowsPerPage, filteredTransactions.length)} de {filteredTransactions.length} transações
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                            <Label htmlFor="rows-per-page" className="whitespace-nowrap">Linhas por pág.</Label>
+                            <Select value={String(rowsPerPage)} onValueChange={(value) => setRowsPerPage(Number(value))}>
+                                <SelectTrigger id="rows-per-page" className="h-8 w-[70px]">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="10">10</SelectItem>
+                                    <SelectItem value="25">25</SelectItem>
+                                    <SelectItem value="50">50</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="font-medium">
+                            Página {currentPage} de {totalPages}
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                disabled={currentPage === 1}
+                            >
+                                <ChevronLeft className="h-4 w-4" />
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                disabled={currentPage === totalPages}
+                            >
+                                <ChevronRight className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </CardFooter>
+        )}
       </Card>
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
