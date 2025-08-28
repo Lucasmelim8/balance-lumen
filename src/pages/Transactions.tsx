@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react';
-import { Plus, Search, Filter, Edit, Trash2 } from 'lucide-react';
+import { Plus, Search, Filter, Edit, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Table,
   TableBody,
@@ -30,8 +31,7 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 
-// --- INÍCIO DA CORREÇÃO: Simulação do Store (Zustand) ---
-// Dados de exemplo para simular o que viria do seu store.
+// --- Simulação do Store (Zustand) ---
 const mockAccounts = [
   { id: 'acc1', name: 'Conta Corrente', type: 'corrente', balance: 5420.50 },
   { id: 'acc2', name: 'Cartão de Crédito', type: 'credito', balance: -850.75 },
@@ -47,15 +47,14 @@ const mockCategories = [
 ];
 
 const mockTransactions = [
-  { id: 't1', description: 'Salário Mensal', amount: 7500, date: '2025-08-05', type: 'income', categoryId: 'cat1', accountId: 'acc1', paymentType: 'monthly' },
-  { id: 't2', description: 'Supermercado', amount: 450.60, date: '2025-08-10', type: 'expense', categoryId: 'cat2', accountId: 'acc2', paymentType: 'single' },
+  { id: 't1', description: 'Salário Mensal', amount: 7500, date: '2025-08-05', type: 'income', categoryId: 'cat1', accountId: 'acc1', paymentType: 'single' },
+  { id: 't2', description: 'Supermercado', amount: 450.60, date: '2025-08-10', type: 'expense', categoryId: 'cat2', accountId: 'acc2', paymentType: 'monthly' },
   { id: 't3', description: 'Uber para o trabalho', amount: 25.50, date: '2025-08-11', type: 'expense', categoryId: 'cat3', accountId: 'acc2', paymentType: 'single' },
   { id: 't4', description: 'Cinema', amount: 60.00, date: '2025-08-12', type: 'expense', categoryId: 'cat4', accountId: 'acc1', paymentType: 'single' },
   { id: 't5', description: 'Netflix', amount: 39.90, date: '2025-07-15', type: 'expense', categoryId: 'cat5', accountId: 'acc2', paymentType: 'recurring' },
-  { id: 't6', description: 'Salário Mensal', amount: 7500, date: '2025-07-05', type: 'income', categoryId: 'cat1', accountId: 'acc1', paymentType: 'monthly' },
+  { id: 't6', description: 'Salário Mensal', amount: 7500, date: '2025-07-05', type: 'income', categoryId: 'cat1', accountId: 'acc1', paymentType: 'single' },
 ];
 
-// Hook de simulação que imita o comportamento do useFinanceStore
 const useFinanceStore = () => {
   const [transactions, setTransactions] = useState(mockTransactions);
   const [accounts] = useState(mockAccounts);
@@ -75,8 +74,6 @@ const useFinanceStore = () => {
 
   return { transactions, categories, accounts, addTransaction, updateTransaction, removeTransaction };
 };
-// --- FIM DA CORREÇÃO ---
-
 
 // Interface para o formulário da transação
 interface TransactionFormData {
@@ -84,9 +81,10 @@ interface TransactionFormData {
   amount: number;
   date: string;
   type: 'income' | 'expense';
-  categoryId: string;
   accountId: string;
-  paymentType: 'single' | 'monthly' | 'recurring';
+  categoryId: string;
+  isMonthly: boolean;
+  isRecurring: boolean;
 }
 
 export default function Transactions() {
@@ -99,7 +97,7 @@ export default function Transactions() {
     removeTransaction
   } = useFinanceStore();
 
-  // Estados para os filtros da tabela
+  // Estados dos filtros
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
   const [filterCategory, setFilterCategory] = useState<string>('all');
@@ -107,7 +105,7 @@ export default function Transactions() {
   const [filterMonth, setFilterMonth] = useState<string>('all');
   const [filterYear, setFilterYear] = useState<string>('all');
 
-  // Estados para controle do modal e do formulário
+  // Estados do modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [currentTransaction, setCurrentTransaction] = useState<any | null>(null);
@@ -116,19 +114,18 @@ export default function Transactions() {
     amount: 0,
     date: new Date().toISOString().split('T')[0],
     type: 'expense',
-    categoryId: '',
     accountId: '',
-    paymentType: 'single',
+    categoryId: '',
+    isMonthly: false,
+    isRecurring: false,
   });
 
-  // Memoização para listas de meses e anos para os filtros
   const { months, years } = useMemo(() => {
     const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
     const uniqueYears = [...new Set(transactions.map(t => new Date(t.date).getFullYear()))].sort((a, b) => b - a);
     return { months: monthNames, years: uniqueYears };
   }, [transactions]);
 
-  // Lógica para filtrar as transações
   const filteredTransactions = transactions.filter((transaction) => {
     const transactionDate = new Date(transaction.date);
     const matchesSearch = transaction.description.toLowerCase().includes(searchTerm.toLowerCase());
@@ -137,11 +134,9 @@ export default function Transactions() {
     const matchesAccount = filterAccount === 'all' || transaction.accountId === filterAccount;
     const matchesMonth = filterMonth === 'all' || transactionDate.getMonth() === parseInt(filterMonth);
     const matchesYear = filterYear === 'all' || transactionDate.getFullYear() === parseInt(filterYear);
-
     return matchesSearch && matchesType && matchesCategory && matchesAccount && matchesMonth && matchesYear;
   });
 
-  // Funções auxiliares
   const formatCurrency = (amount: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount);
   const getCategoryName = (categoryId: string) => categories.find(c => c.id === categoryId)?.name || 'N/A';
   const getAccountName = (accountId: string) => accounts.find(a => a.id === accountId)?.name || 'N/A';
@@ -153,21 +148,37 @@ export default function Transactions() {
     }
   };
 
-  // Manipuladores de formulário e modal
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setFilterType('all');
+    setFilterCategory('all');
+    setFilterAccount('all');
+    setFilterMonth('all');
+    setFilterYear('all');
+  };
+
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type } = e.target;
     setTransactionFormData(prev => ({ ...prev, [name]: type === 'number' ? parseFloat(value) : value }));
   };
 
-  const handleSelectChange = (name: keyof TransactionFormData, value: string) => {
+  const handleSelectChange = (name: keyof Omit<TransactionFormData, 'isMonthly' | 'isRecurring'>, value: string) => {
     setTransactionFormData(prev => ({ ...prev, [name]: value as any }));
+  };
+
+  const handleCheckboxChange = (name: 'isMonthly' | 'isRecurring', checked: boolean) => {
+    setTransactionFormData(prev => ({
+      ...prev,
+      isMonthly: name === 'isMonthly' ? checked : (checked ? false : prev.isMonthly),
+      isRecurring: name === 'isRecurring' ? checked : (checked ? false : prev.isRecurring),
+    }));
   };
 
   const handleOpenAddModal = () => {
     setCurrentTransaction(null);
     setTransactionFormData({
       description: '', amount: 0, date: new Date().toISOString().split('T')[0],
-      type: 'expense', categoryId: '', accountId: '', paymentType: 'single',
+      type: 'expense', accountId: '', categoryId: '', isMonthly: false, isRecurring: false,
     });
     setIsModalOpen(true);
   };
@@ -177,22 +188,31 @@ export default function Transactions() {
     setTransactionFormData({
       description: transaction.description, amount: transaction.amount,
       date: new Date(transaction.date).toISOString().split('T')[0],
-      type: transaction.type, categoryId: transaction.categoryId,
-      accountId: transaction.accountId, paymentType: transaction.paymentType || 'single',
+      type: transaction.type, accountId: transaction.accountId, categoryId: transaction.categoryId,
+      isMonthly: transaction.paymentType === 'monthly',
+      isRecurring: transaction.paymentType === 'recurring',
     });
     setIsModalOpen(true);
   };
 
   const handleSaveChanges = () => {
     if (!transactionFormData.description || transactionFormData.amount <= 0 || !transactionFormData.accountId || !transactionFormData.categoryId) {
-      // Substituindo o alert por uma abordagem mais amigável no futuro
       console.error("Por favor, preencha todos os campos obrigatórios.");
       return;
     }
+    const { isMonthly, isRecurring, ...rest } = transactionFormData;
+    let paymentType = 'single';
+    if (transactionFormData.type === 'expense') {
+        if (isRecurring) paymentType = 'recurring';
+        else if (isMonthly) paymentType = 'monthly';
+    }
+
+    const transactionData = { ...rest, paymentType };
+
     if (currentTransaction) {
-      updateTransaction({ ...currentTransaction, ...transactionFormData });
+      updateTransaction({ ...currentTransaction, ...transactionData });
     } else {
-      addTransaction({ id: Date.now().toString(), ...transactionFormData });
+      addTransaction({ id: Date.now().toString(), ...transactionData });
     }
     setIsModalOpen(false);
   };
@@ -225,27 +245,17 @@ export default function Transactions() {
           <CardTitle className="flex items-center gap-2"><Filter className="h-5 w-5" /> Filtros</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
-            <div className="relative md:col-span-3 lg:col-span-2">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Buscar transação..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 items-end">
+            <div className="relative xl:col-span-2">
+              <Label>Buscar</Label>
+              <Search className="absolute left-3 top-1/2 transform translate-y-1/4 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Buscar por descrição..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
             </div>
-            <Select value={filterType} onValueChange={(value: 'all' | 'income' | 'expense') => setFilterType(value)}>
-              <SelectTrigger><SelectValue placeholder="Tipo" /></SelectTrigger>
-              <SelectContent><SelectItem value="all">Todos os tipos</SelectItem><SelectItem value="income">Receitas</SelectItem><SelectItem value="expense">Despesas</SelectItem></SelectContent>
-            </Select>
-            <Select value={filterCategory} onValueChange={setFilterCategory}>
-              <SelectTrigger><SelectValue placeholder="Categoria" /></SelectTrigger>
-              <SelectContent><SelectItem value="all">Todas as categorias</SelectItem>{categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
-            </Select>
-            <Select value={filterMonth} onValueChange={setFilterMonth}>
-              <SelectTrigger><SelectValue placeholder="Mês" /></SelectTrigger>
-              <SelectContent><SelectItem value="all">Todos os meses</SelectItem>{months.map((m, i) => <SelectItem key={i} value={i.toString()}>{m}</SelectItem>)}</SelectContent>
-            </Select>
-            <Select value={filterYear} onValueChange={setFilterYear}>
-              <SelectTrigger><SelectValue placeholder="Ano" /></SelectTrigger>
-              <SelectContent><SelectItem value="all">Todos os anos</SelectItem>{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent>
-            </Select>
+            <div className="flex flex-col gap-1.5"><Label>Tipo</Label><Select value={filterType} onValueChange={(v: any) => setFilterType(v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem><SelectItem value="income">Receitas</SelectItem><SelectItem value="expense">Despesas</SelectItem></SelectContent></Select></div>
+            <div className="flex flex-col gap-1.5"><Label>Categoria</Label><Select value={filterCategory} onValueChange={setFilterCategory}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todas</SelectItem>{categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent></Select></div>
+            <div className="flex flex-col gap-1.5"><Label>Mês</Label><Select value={filterMonth} onValueChange={setFilterMonth}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{months.map((m, i) => <SelectItem key={i} value={i.toString()}>{m}</SelectItem>)}</SelectContent></Select></div>
+            <div className="flex flex-col gap-1.5"><Label>Ano</Label><Select value={filterYear} onValueChange={setFilterYear}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent></Select></div>
+            <Button variant="outline" onClick={handleClearFilters} className="w-full"><X className="mr-2 h-4 w-4" /> Limpar</Button>
           </div>
         </CardContent>
       </Card>
@@ -324,13 +334,6 @@ export default function Transactions() {
               </Select>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="paymentType" className="text-right">Pagamento</Label>
-              <Select onValueChange={(v) => handleSelectChange('paymentType', v)} value={transactionFormData.paymentType}>
-                <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
-                <SelectContent><SelectItem value="single">Único</SelectItem><SelectItem value="monthly">Mensal</SelectItem><SelectItem value="recurring">Mensal Recorrente</SelectItem></SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="accountId" className="text-right">Conta</Label>
               <Select onValueChange={(v) => handleSelectChange('accountId', v)} value={transactionFormData.accountId}>
                 <SelectTrigger className="col-span-3"><SelectValue placeholder="Selecione uma conta" /></SelectTrigger>
@@ -344,6 +347,21 @@ export default function Transactions() {
                 <SelectContent>{categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
+            {transactionFormData.type === 'expense' && (
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Opções</Label>
+                <div className="col-span-3 flex items-center space-x-4">
+                    <div className="flex items-center space-x-2">
+                        <Checkbox id="isMonthly" checked={transactionFormData.isMonthly} onCheckedChange={(checked) => handleCheckboxChange('isMonthly', !!checked)} />
+                        <label htmlFor="isMonthly" className="text-sm font-medium leading-none">Gasto Mensal</label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <Checkbox id="isRecurring" checked={transactionFormData.isRecurring} onCheckedChange={(checked) => handleCheckboxChange('isRecurring', !!checked)} />
+                        <label htmlFor="isRecurring" className="text-sm font-medium leading-none">Gasto Recorrente</label>
+                    </div>
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <DialogClose asChild><Button type="button" variant="secondary">Cancelar</Button></DialogClose>
