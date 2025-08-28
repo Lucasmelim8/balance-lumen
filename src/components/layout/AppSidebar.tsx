@@ -5,8 +5,7 @@ import {
   Calendar, 
   Tags, 
   Settings, 
-  LogOut, 
-  Sun
+  LogOut
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
@@ -100,12 +99,6 @@ export function AppSidebar() {
       {/* FOOTER */}
       <SidebarFooter className="px-2 py-3 border-t border-sidebar-border">
         <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton className="w-full gap-3 px-3 py-2.5 hover:bg-sidebar-accent transition rounded-lg">
-              <Sun className="h-5 w-5" />
-              {!isCollapsed && <span className="text-sm">Tema Claro/Escuro</span>}
-            </SidebarMenuButton>
-          </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton className="w-full gap-3 px-3 py-2.5 hover:bg-sidebar-accent transition rounded-lg text-red-500">
               <LogOut className="h-5 w-5" />
