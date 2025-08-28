@@ -11,7 +11,9 @@ import {
   Settings,
   MoreVertical,
   Pencil,
-  Trash2
+  Trash2,
+  Landmark,         // Ícone adicionado para conta corrente
+  CircleDollarSign, // Ícone adicionado para o tipo 'outro'
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -38,6 +40,22 @@ import { useFinanceStore } from '@/store/financeStore';
 
 // Mock de dados para o tipo de conta, caso não venha do store
 const accountTypes = ['corrente', 'poupança', 'investimento', 'outro'];
+
+// --- NOVO: Componente auxiliar para renderizar o ícone da conta ---
+const AccountIcon = ({ type, className = "h-5 w-5 text-primary" }) => {
+  switch (type?.toLowerCase()) {
+    case 'corrente':
+      return <Landmark className={className} />;
+    case 'poupança':
+      return <PiggyBank className={className} />;
+    case 'investimento':
+      return <TrendingUp className={className} />;
+    case 'outro':
+      return <CircleDollarSign className={className} />;
+    default:
+      return <Wallet className={className} />;
+  }
+};
 
 export default function Home() {
   // Estado do store Zustand
@@ -207,7 +225,8 @@ export default function Home() {
                 accounts.slice(0, 4).map((account) => (
                   <div key={account.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                     <div className="flex items-center gap-4">
-                      <Wallet className="h-5 w-5 text-primary" />
+                      {/* --- ALTERADO: Ícone dinâmico baseado no tipo da conta --- */}
+                      <AccountIcon type={account.type} />
                       <div>
                         <p className="font-medium">{account.name}</p>
                         <p className="text-sm text-muted-foreground capitalize">{account.type}</p>
