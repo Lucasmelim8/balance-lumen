@@ -18,26 +18,50 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-card shadow-soft">
       <div className="flex h-16 items-center px-6">
-        {/* Left - Logo and Sidebar Toggle */}
+        {/* Left - Sidebar Toggle (Mobile) */}
         <div className="flex items-center gap-4">
           <SidebarTrigger className="md:hidden" />
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">ET</span>
-            </div>
-            <span className="font-bold text-xl text-foreground">Expense Tracker</span>
-          </div>
         </div>
-        
-        {/* Center - Empty space */}
+
+        {/* Center - Empty (flexible spacing) */}
         <div className="flex-1" />
-        
+
         {/* Right - Notifications and User Menu */}
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-5 w-5" />
-          </Button>
-          
+          {/* Notifications Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="relative">
+                <Bell className="h-5 w-5" />
+                <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-72">
+              <div className="px-3 py-2 text-sm font-medium">Notificações</div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link to="/transactions" className="flex items-center text-sm">
+                  Nova transação adicionada
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/savings" className="flex items-center text-sm">
+                  Você alcançou sua meta da Caixinha 🎉
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/special-dates" className="flex items-center text-sm">
+                  Lembre-se: Data especial amanhã
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <div className="px-3 py-2 text-xs text-muted-foreground">
+                Ver todas as notificações
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* User Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="flex items-center gap-3 px-3 py-2 h-auto">
