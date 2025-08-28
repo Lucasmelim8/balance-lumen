@@ -120,6 +120,10 @@ export default function Transactions() {
     isRecurring: false,
   });
 
+  // Estados da paginação
+  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [currentPage, setCurrentPage] = useState(1);
+
   const { months, years } = useMemo(() => {
     const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
     const uniqueYears = [...new Set(transactions.map(t => new Date(t.date).getFullYear()))].sort((a, b) => b - a);
@@ -137,14 +141,18 @@ export default function Transactions() {
     return matchesSearch && matchesType && matchesCategory && matchesAccount && matchesMonth && matchesYear;
   });
 
+  // Paginação aplicada
+  const totalPages = Math.ceil(filteredTransactions.length / rowsPerPage);
+  const paginatedTransactions = filteredTransactions.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+
   const formatCurrency = (amount: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount);
   const getCategoryName = (categoryId: string) => categories.find(c => c.id === categoryId)?.name || 'N/A';
   const getAccountName = (accountId: string) => accounts.find(a => a.id === accountId)?.name || 'N/A';
-  const getPaymentTypeName = (type: string) => {
+  const getPaymentBadge = (type: string) => {
     switch (type) {
-      case 'monthly': return 'Mensal';
-      case 'recurring': return 'Recorrente';
-      default: return 'Único';
+      case 'monthly': return <Badge className="bg-blue-500 text-white">Mensal</Badge>;
+      case 'recurring': return <Badge className="bg-purple-500 text-white">Recorrente</Badge>;
+      default: return <Badge variant="secondary">Único</Badge>;
     }
   };
 
@@ -240,6 +248,7 @@ export default function Transactions() {
         </Button>
       </div>
 
+      {/* Filtros */}
       <Card className="bg-gradient-card shadow-medium">
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Filter className="h-5 w-5" /> Filtros</CardTitle>
@@ -260,6 +269,7 @@ export default function Transactions() {
         </CardContent>
       </Card>
 
+      {/* Lista de Transações */}
       <Card className="bg-gradient-card shadow-medium">
         <CardHeader>
           <CardTitle>Lista de Transações</CardTitle>
@@ -267,121 +277,25 @@ export default function Transactions() {
         </CardHeader>
         <CardContent>
           {filteredTransactions.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead>Pagamento</TableHead>
-                  <TableHead>Conta</TableHead>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead className="text-right">Valor</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredTransactions.map((t) => (
-                  <TableRow key={t.id}>
-                    <TableCell className="font-medium">{t.description}<div className="text-xs text-muted-foreground">{getCategoryName(t.categoryId)}</div></TableCell>
-                    <TableCell><Badge variant="secondary">{getPaymentTypeName(t.paymentType)}</Badge></TableCell>
-                    <TableCell>{getAccountName(t.accountId)}</TableCell>
-                    <TableCell>{new Date(t.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</TableCell>
-                    <TableCell><Badge variant={t.type === 'income' ? 'default' : 'destructive'} className={t.type === 'income' ? 'bg-success hover:bg-success/80' : ''}>{t.type === 'income' ? 'Receita' : 'Despesa'}</Badge></TableCell>
-                    <TableCell className={`text-right font-semibold ${t.type === 'income' ? 'text-success' : 'text-destructive'}`}>{t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleOpenEditModal(t)}><Edit className="h-4 w-4" /></Button>
-                        <Button variant="outline" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleOpenDeleteConfirm(t)}><Trash2 className="h-4 w-4" /></Button>
-                      </div>
-                    </TableCell>
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Descrição</TableHead>
+                    <TableHead>Pagamento</TableHead>
+                    <TableHead>Conta</TableHead>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead className="text-right">Valor</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">Nenhuma transação encontrada</p>
-              <Button onClick={handleOpenAddModal} className="mt-4"><Plus className="mr-2 h-4 w-4" /> Adicionar primeira transação</Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-[480px]">
-          <DialogHeader>
-            <DialogTitle>{currentTransaction ? 'Editar Transação' : 'Adicionar Nova Transação'}</DialogTitle>
-            <DialogDescription>Preencha os detalhes da sua movimentação financeira.</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="description" className="text-right">Descrição</Label>
-              <Input id="description" name="description" value={transactionFormData.description} onChange={handleFormChange} className="col-span-3" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="amount" className="text-right">Valor</Label>
-              <Input id="amount" name="amount" type="number" value={transactionFormData.amount} onChange={handleFormChange} className="col-span-3" placeholder="0.00" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="date" className="text-right">Data</Label>
-              <Input id="date" name="date" type="date" value={transactionFormData.date} onChange={handleFormChange} className="col-span-3" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="type" className="text-right">Tipo</Label>
-              <Select onValueChange={(v) => handleSelectChange('type', v)} value={transactionFormData.type}>
-                <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
-                <SelectContent><SelectItem value="expense">Despesa</SelectItem><SelectItem value="income">Receita</SelectItem></SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="accountId" className="text-right">Conta</Label>
-              <Select onValueChange={(v) => handleSelectChange('accountId', v)} value={transactionFormData.accountId}>
-                <SelectTrigger className="col-span-3"><SelectValue placeholder="Selecione uma conta" /></SelectTrigger>
-                <SelectContent>{accounts.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="categoryId" className="text-right">Categoria</Label>
-              <Select onValueChange={(v) => handleSelectChange('categoryId', v)} value={transactionFormData.categoryId}>
-                <SelectTrigger className="col-span-3"><SelectValue placeholder="Selecione uma categoria" /></SelectTrigger>
-                <SelectContent>{categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            {transactionFormData.type === 'expense' && (
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right">Opções</Label>
-                <div className="col-span-3 flex items-center space-x-4">
-                    <div className="flex items-center space-x-2">
-                        <Checkbox id="isMonthly" checked={transactionFormData.isMonthly} onCheckedChange={(checked) => handleCheckboxChange('isMonthly', !!checked)} />
-                        <label htmlFor="isMonthly" className="text-sm font-medium leading-none">Gasto Mensal</label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                        <Checkbox id="isRecurring" checked={transactionFormData.isRecurring} onCheckedChange={(checked) => handleCheckboxChange('isRecurring', !!checked)} />
-                        <label htmlFor="isRecurring" className="text-sm font-medium leading-none">Gasto Recorrente</label>
-                    </div>
-                </div>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <DialogClose asChild><Button type="button" variant="secondary">Cancelar</Button></DialogClose>
-            <Button type="submit" onClick={handleSaveChanges}>Salvar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Confirmar Exclusão</DialogTitle>
-            <DialogDescription>Você tem certeza que deseja excluir a transação "{currentTransaction?.description}"? Esta ação não pode ser desfeita.</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogClose asChild><Button type="button" variant="secondary">Cancelar</Button></DialogClose>
-            <Button type="button" variant="destructive" onClick={handleDeleteConfirm}>Excluir</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
+                </TableHeader>
+                <TableBody>
+                  {paginatedTransactions.map((t) => (
+                    <TableRow key={t.id}>
+                      <TableCell className="font-medium">{t.description}<div className="text-xs text-muted-foreground">{getCategoryName(t.categoryId)}</div></TableCell>
+                      <TableCell>{getPaymentBadge(t.paymentType)}</TableCell>
+                      <TableCell>{getAccountName(t.accountId)}</TableCell>
+                      <TableCell>{new Date(t.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</TableCell>
+                      <TableCell><Badge variant={t.type === 'income' ? 'default' : 'destructive'} className={t.type === 'income' ? 'bg-success hover:bg-success/80' : ''}>{t.type === 'income' ? 'Receita' : 'Despesa'}</Badge></TableCell>
+                      <TableCell className={`text-right font-semibold ${t.type === 'income' ? 'text-success' : 'text-destructive'}`}>{t.type === 'income' ? '+' :
