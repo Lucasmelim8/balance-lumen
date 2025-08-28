@@ -1,11 +1,10 @@
 import { 
-  Home, 
-  CreditCard, 
-  FolderOpen, 
-  Calendar, 
+  House, 
+  List, 
   PiggyBank, 
-  Settings,
-  ChevronRight
+  Calendar, 
+  Tags, 
+  Settings
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
@@ -13,7 +12,6 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -22,11 +20,11 @@ import {
 import { cn } from '@/lib/utils';
 
 const navigationItems = [
-  { title: 'Dashboard', url: '/home', icon: Home },
-  { title: 'Transações', url: '/transactions', icon: CreditCard },
-  { title: 'Categorias', url: '/categories', icon: FolderOpen },
-  { title: 'Datas Especiais', url: '/special-dates', icon: Calendar },
+  { title: 'Home', url: '/home', icon: House },
+  { title: 'Transações', url: '/transactions', icon: List },
   { title: 'Caixinha', url: '/savings', icon: PiggyBank },
+  { title: 'Datas Especiais', url: '/special-dates', icon: Calendar },
+  { title: 'Categorias', url: '/categories', icon: Tags },
   { title: 'Configurações', url: '/settings', icon: Settings },
 ];
 
@@ -36,14 +34,11 @@ export function AppSidebar() {
   const isCollapsed = state === 'collapsed';
 
   return (
-    <Sidebar className="border-r bg-gradient-card">
-      <SidebarContent>
+    <Sidebar className="bg-sidebar-background border-sidebar-border">
+      <SidebarContent className="px-2 py-4">
         <SidebarGroup>
-          <SidebarGroupLabel className="text-muted-foreground font-medium">
-            Menu Principal
-          </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="space-y-1">
               {navigationItems.map((item) => {
                 const isActive = location.pathname === item.url || 
                   (item.url === '/home' && location.pathname === '/') ||
@@ -54,22 +49,14 @@ export function AppSidebar() {
                     <SidebarMenuButton 
                       asChild 
                       className={cn(
-                        "group relative transition-all duration-200 hover:bg-accent/50",
-                        isActive && "bg-primary text-primary-foreground hover:bg-primary/90 shadow-medium"
+                        "w-full justify-start gap-3 px-3 py-2.5 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-primary transition-all duration-200",
+                        isActive && "bg-sidebar-primary text-sidebar-primary-foreground font-medium shadow-sm"
                       )}
                     >
                       <NavLink to={item.url} className="flex items-center gap-3">
-                        <item.icon className={cn(
-                          "h-5 w-5 transition-transform group-hover:scale-110",
-                          isActive && "text-primary-foreground"
-                        )} />
+                        <item.icon className="h-5 w-5 flex-shrink-0" />
                         {!isCollapsed && (
-                          <>
-                            <span className="font-medium">{item.title}</span>
-                            {isActive && (
-                              <ChevronRight className="ml-auto h-4 w-4 text-primary-foreground" />
-                            )}
-                          </>
+                          <span className="text-sm">{item.title}</span>
                         )}
                       </NavLink>
                     </SidebarMenuButton>

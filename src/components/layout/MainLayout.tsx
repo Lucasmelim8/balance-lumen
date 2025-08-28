@@ -14,8 +14,10 @@ export function MainLayout({ children }: MainLayoutProps) {
         <AppSidebar />
         <div className="flex-1 flex flex-col">
           <Navbar />
-          <main className="flex-1 p-6">
-            {children}
+          <main className="flex-1 p-6 overflow-auto">
+            <div className="max-w-7xl mx-auto">
+              {children}
+            </div>
           </main>
         </div>
       </div>
