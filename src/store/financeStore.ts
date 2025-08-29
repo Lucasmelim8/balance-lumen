@@ -42,13 +42,24 @@ export interface SavingsGoal {
   createdAt: string;
 }
 
+// NOVO: Interface para Metas Mensais
+export interface MonthlyGoal {
+  id: string; // ex: "2024-08-cat1"
+  year: number;
+  month: number; // 0-11
+  categoryId: string;
+  amount: number;
+}
+
+
 interface FinanceState {
   accounts: Account[];
   transactions: Transaction[];
   categories: Category[];
   specialDates: SpecialDate[];
   savingsGoals: SavingsGoal[];
-  
+  monthlyGoals: MonthlyGoal[]; // NOVO
+
   // Account methods
   addAccount: (account: Omit<Account, 'id'>) => void;
   updateAccount: (id: string, account: Partial<Account>) => void;
@@ -74,11 +85,14 @@ interface FinanceState {
   updateSavingsGoal: (id: string, goal: Partial<SavingsGoal>) => void;
   removeSavingsGoal: (id: string) => void;
   addToSavingsGoal: (id: string, amount: number) => void;
+
+  // NOVO: Métodos para Metas Mensais
+  setMonthlyGoal: (goal: Omit<MonthlyGoal, 'id'>) => void;
   
   // Getters
   getTotalBalance: () => number;
-  getTotalIncome: () => number;
-  getTotalExpenses: () => number;
+  getTotalIncome: (month?: number, year?: number) => number;
+  getTotalExpenses: (month?: number, year?: number) => number;
 }
 
 const initialCategories: Category[] = [
@@ -94,6 +108,12 @@ const initialAccounts: Account[] = [
   { id: '2', name: 'Poupança', balance: 8000, type: 'savings' },
 ];
 
+// NOVO: Dados iniciais para metas
+const initialMonthlyGoals: MonthlyGoal[] = [
+    { id: '2025-7-1', year: 2025, month: 7, categoryId: '1', amount: 800 },
+    { id: '2025-7-2', year: 2025, month: 7, categoryId: '2', amount: 250 },
+]
+
 export const useFinanceStore = create<FinanceState>()(
   persist(
     (set, get) => ({
@@ -102,6 +122,7 @@ export const useFinanceStore = create<FinanceState>()(
       categories: initialCategories,
       specialDates: [],
       savingsGoals: [],
+      monthlyGoals: initialMonthlyGoals, // NOVO
       
       // Account methods
       addAccount: (account) => {
@@ -205,37 +226,51 @@ export const useFinanceStore = create<FinanceState>()(
           ),
         }));
       },
+
+      // NOVO: Métodos para Metas
+      setMonthlyGoal: (goal) => {
+        const id = `${goal.year}-${goal.month}-${goal.categoryId}`;
+        set((state) => {
+            const existingGoal = state.monthlyGoals.find(g => g.id === id);
+            if (existingGoal) {
+                return {
+                    monthlyGoals: state.monthlyGoals.map(g => g.id === id ? { ...g, ...goal, id } : g)
+                }
+            }
+            return { monthlyGoals: [...state.monthlyGoals, { ...goal, id }] }
+        });
+      },
       
       // Getters
       getTotalBalance: () => {
         const { accounts } = get();
         return accounts.reduce((total, account) => total + account.balance, 0);
       },
-      getTotalIncome: () => {
+      getTotalIncome: (month, year) => {
         const { transactions } = get();
-        const currentMonth = new Date().getMonth();
-        const currentYear = new Date().getFullYear();
+        const currentMonth = month ?? new Date().getMonth();
+        const currentYear = year ?? new Date().getFullYear();
         
         return transactions
           .filter((tx) => {
             const txDate = new Date(tx.date);
-            return tx.type === 'income' && 
-                   txDate.getMonth() === currentMonth && 
-                   txDate.getFullYear() === currentYear;
+            const matchMonth = month === undefined ? true : txDate.getMonth() === currentMonth;
+            const matchYear = year === undefined ? true : txDate.getFullYear() === currentYear;
+            return tx.type === 'income' && matchMonth && matchYear;
           })
           .reduce((total, tx) => total + tx.amount, 0);
       },
-      getTotalExpenses: () => {
+      getTotalExpenses: (month, year) => {
         const { transactions } = get();
-        const currentMonth = new Date().getMonth();
-        const currentYear = new Date().getFullYear();
+        const currentMonth = month ?? new Date().getMonth();
+        const currentYear = year ?? new Date().getFullYear();
         
         return transactions
           .filter((tx) => {
             const txDate = new Date(tx.date);
-            return tx.type === 'expense' && 
-                   txDate.getMonth() === currentMonth && 
-                   txDate.getFullYear() === currentYear;
+            const matchMonth = month === undefined ? true : txDate.getMonth() === currentMonth;
+            const matchYear = year === undefined ? true : txDate.getFullYear() === currentYear;
+            return tx.type === 'expense' && matchMonth && matchYear;
           })
           .reduce((total, tx) => total + tx.amount, 0);
       },
