@@ -46,14 +46,14 @@ All colors MUST be HSL.
 
     --radius: 0.75rem;
 
-    /* Sidebar - Dark theme */
-    --sidebar-background: 0 0% 12%; /* #1f1f1f */
-    --sidebar-foreground: 0 0% 100%; /* white */
-    --sidebar-primary: 217 91% 60%; /* blue hover */
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 15%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 0 0% 15%;
+    /* Sidebar - Light theme */
+    --sidebar-background: 0 0% 100%; /* white */
+    --sidebar-foreground: 0 0% 20%; /* dark gray text */
+    --sidebar-primary: 217 91% 60%; /* blue active */
+    --sidebar-primary-foreground: 0 0% 100%; /* white text on active */
+    --sidebar-accent: 217 91% 95%; /* light blue hover */
+    --sidebar-accent-foreground: 217 91% 60%; /* blue text on hover */
+    --sidebar-border: 0 0% 92%; /* light gray border */
     --sidebar-ring: 217 91% 60%;
 
     /* Clean gradients */

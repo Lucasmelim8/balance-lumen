@@ -39,19 +39,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useFinanceStore } from '@/store/financeStore';
 
 // Mock de dados para o tipo de conta, caso não venha do store
-const accountTypes = ['corrente', 'poupança', 'investimento', 'outro'];
+const accountTypes = [
+  { value: 'checking', label: 'Conta Corrente' },
+  { value: 'savings', label: 'Poupança' },
+  { value: 'credit', label: 'Cartão de Crédito' },
+];
 
 // --- NOVO: Componente auxiliar para renderizar o ícone da conta ---
 const AccountIcon = ({ type, className = "h-5 w-5 text-primary" }) => {
   switch (type?.toLowerCase()) {
-    case 'corrente':
+    case 'checking':
       return <Landmark className={className} />;
-    case 'poupança':
+    case 'savings':
       return <PiggyBank className={className} />;
-    case 'investimento':
-      return <TrendingUp className={className} />;
-    case 'outro':
-      return <CircleDollarSign className={className} />;
+    case 'credit':
+      return <CreditCard className={className} />;
     default:
       return <Wallet className={className} />;
   }
@@ -68,14 +70,18 @@ export default function Home() {
     getTotalExpenses,
     addAccount,   // Assumindo que essas funções existem no seu store
     updateAccount, // Assumindo que essas funções existem no seu store
-    deleteAccount, // Assumindo que essas funções existem no seu store
+    removeAccount, // Corrigido: deleteAccount -> removeAccount
   } = useFinanceStore();
 
   // Estados locais para controle dos modais e formulários
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [currentAccount, setCurrentAccount] = useState(null);
-  const [accountFormData, setAccountFormData] = useState({
+  const [accountFormData, setAccountFormData] = useState<{
+    name: string;
+    type: 'checking' | 'savings' | 'credit' | '';
+    balance: number;
+  }>({
     name: '',
     type: '',
     balance: 0,
@@ -126,23 +132,28 @@ export default function Home() {
     setIsDeleteConfirmOpen(true);
   };
 
-  const handleSaveChanges = () => {
+  const handleSaveAccount = () => {
+    if (!accountFormData.name || !accountFormData.type) return;
+
+    const accountData = {
+      name: accountFormData.name,
+      type: accountFormData.type as 'checking' | 'savings' | 'credit',
+      balance: accountFormData.balance,
+    };
+
     if (currentAccount) {
       // Atualizar conta existente
-      updateAccount({ ...currentAccount, ...accountFormData });
+      updateAccount(currentAccount.id, accountData);
     } else {
       // Adicionar nova conta
-      addAccount({
-        id: Date.now().toString(), // Gerar um ID simples
-        ...accountFormData,
-      });
+      addAccount(accountData);
     }
     setIsModalOpen(false);
   };
 
   const handleDeleteConfirm = () => {
     if (currentAccount) {
-      deleteAccount(currentAccount.id);
+      removeAccount(currentAccount.id);
     }
     setIsDeleteConfirmOpen(false);
     setCurrentAccount(null);
@@ -153,7 +164,7 @@ export default function Home() {
     setAccountFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSelectChange = (value) => {
+  const handleSelectChange = (value: 'checking' | 'savings' | 'credit') => {
     setAccountFormData(prev => ({ ...prev, type: value }));
   };
 
@@ -229,7 +240,11 @@ export default function Home() {
                       <AccountIcon type={account.type} />
                       <div>
                         <p className="font-medium">{account.name}</p>
-                        <p className="text-sm text-muted-foreground capitalize">{account.type}</p>
+                        <p className="text-sm text-muted-foreground capitalize">
+                          {account.type === 'checking' ? 'Conta Corrente' : 
+                           account.type === 'savings' ? 'Poupança' : 
+                           account.type === 'credit' ? 'Cartão de Crédito' : account.type}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -359,7 +374,7 @@ export default function Home() {
                 </SelectTrigger>
                 <SelectContent>
                   {accountTypes.map(type => (
-                    <SelectItem key={type} value={type} className="capitalize">{type}</SelectItem>
+                    <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -373,7 +388,7 @@ export default function Home() {
             <DialogClose asChild>
               <Button type="button" variant="secondary">Cancelar</Button>
             </DialogClose>
-            <Button type="submit" onClick={handleSaveChanges}>Salvar</Button>
+            <Button type="submit" onClick={handleSaveAccount}>Salvar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

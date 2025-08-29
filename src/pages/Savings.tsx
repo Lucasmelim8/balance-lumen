@@ -43,7 +43,7 @@ const userAccounts = [
 
 
 export default function Savings() {
-  const { savingsGoals, addSavingsGoal, updateSavingsGoal, removeSavingsGoal, addToSavingsGoal, withdrawFromSavingsGoal } = useFinanceStore();
+  const { savingsGoals, addSavingsGoal, updateSavingsGoal, removeSavingsGoal, addToSavingsGoal } = useFinanceStore();
   const { toast } = useToast();
 
   const [isGoalDialogOpen, setIsGoalDialogOpen] = useState(false);
@@ -163,7 +163,9 @@ export default function Savings() {
             toast({ title: "Valor insuficiente", description: `Você não tem ${formatCurrency(amount)} para retirar desta caixinha.`, variant: "destructive" });
             return;
         }
-        withdrawFromSavingsGoal(selectedGoal, amount);
+        // Simulate withdraw function (since it doesn't exist in store)
+        const newAmount = Math.max(goal.currentAmount - amount, 0);
+        updateSavingsGoal(selectedGoal, { currentAmount: newAmount });
         // Aqui você também deveria atualizar o saldo da conta no seu estado global
         toast({ title: "Valor retirado", description: `${formatCurrency(amount)} foi retirado da sua caixinha.` });
     }
@@ -383,12 +385,7 @@ export default function Savings() {
                         Concluída!
                       </div>
                     )}
-                  </div>
-                   {goal.targetDate && (
-                      <p className="text-xs text-muted-foreground pt-1">
-                          Meta para: {format(new Date(goal.targetDate), "dd/MM/yyyy")}
-                      </p>
-                  )}
+                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4 flex-grow flex flex-col justify-between">
                   <div className="space-y-2">
