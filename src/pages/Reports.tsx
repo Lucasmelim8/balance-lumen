@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useFinanceStore } from '@/store/financeStore';
+import { useFinanceStore } from '../store/financeStore';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -92,8 +92,8 @@ export default function Reports() {
             <Card 
               key={month} 
               className={`transition-all hover:shadow-large hover:-translate-y-1 cursor-pointer ${!hasData && 'opacity-60'}`}
-              // Certifique-se de que o clique só funciona se houver dados
-              onClick={() => hasData && handleMonthClick(month)}
+              // Ação de clique agora funciona para todos os meses
+              onClick={() => handleMonthClick(month)}
             >
               <CardHeader>
                 <CardTitle className="capitalize">{monthName}</CardTitle>
@@ -122,3 +122,4 @@ export default function Reports() {
     </div>
   );
 }
+
