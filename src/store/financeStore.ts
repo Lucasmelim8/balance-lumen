@@ -42,13 +42,21 @@ export interface SavingsGoal {
   createdAt: string;
 }
 
-// NOVO: Interface para Metas Mensais
-export interface MonthlyGoal {
+// Metas Mensais por semana
+export interface WeeklyGoal {
   id: string; // ex: "2024-08-cat1"
   year: number;
   month: number; // 0-11
   categoryId: string;
-  amount: number;
+  weeklyAmounts: (number | undefined)[];
+}
+
+// Anotações Mensais
+export interface MonthlyNote {
+    id: string; // ex: "2024-08"
+    year: number;
+    month: number;
+    content: string;
 }
 
 
@@ -58,7 +66,8 @@ interface FinanceState {
   categories: Category[];
   specialDates: SpecialDate[];
   savingsGoals: SavingsGoal[];
-  monthlyGoals: MonthlyGoal[]; // NOVO
+  weeklyGoals: WeeklyGoal[]; 
+  monthlyNotes: MonthlyNote[];
 
   // Account methods
   addAccount: (account: Omit<Account, 'id'>) => void;
@@ -86,8 +95,11 @@ interface FinanceState {
   removeSavingsGoal: (id: string) => void;
   addToSavingsGoal: (id: string, amount: number) => void;
 
-  // NOVO: Métodos para Metas Mensais
-  setMonthlyGoal: (goal: Omit<MonthlyGoal, 'id'>) => void;
+  // Métodos para Metas Semanais
+  setWeeklyGoal: (goal: Omit<WeeklyGoal, 'id'>) => void;
+
+  // Métodos para Anotações Mensais
+  setMonthlyNote: (note: Omit<MonthlyNote, 'id'>) => void;
   
   // Getters
   getTotalBalance: () => number;
@@ -108,11 +120,6 @@ const initialAccounts: Account[] = [
   { id: '2', name: 'Poupança', balance: 8000, type: 'savings' },
 ];
 
-// NOVO: Dados iniciais para metas
-const initialMonthlyGoals: MonthlyGoal[] = [
-    { id: '2025-7-1', year: 2025, month: 7, categoryId: '1', amount: 800 },
-    { id: '2025-7-2', year: 2025, month: 7, categoryId: '2', amount: 250 },
-]
 
 export const useFinanceStore = create<FinanceState>()(
   persist(
@@ -122,7 +129,8 @@ export const useFinanceStore = create<FinanceState>()(
       categories: initialCategories,
       specialDates: [],
       savingsGoals: [],
-      monthlyGoals: initialMonthlyGoals, // NOVO
+      weeklyGoals: [],
+      monthlyNotes: [],
       
       // Account methods
       addAccount: (account) => {
@@ -227,17 +235,29 @@ export const useFinanceStore = create<FinanceState>()(
         }));
       },
 
-      // NOVO: Métodos para Metas
-      setMonthlyGoal: (goal) => {
+      setWeeklyGoal: (goal) => {
         const id = `${goal.year}-${goal.month}-${goal.categoryId}`;
         set((state) => {
-            const existingGoal = state.monthlyGoals.find(g => g.id === id);
+            const existingGoal = state.weeklyGoals.find(g => g.id === id);
             if (existingGoal) {
                 return {
-                    monthlyGoals: state.monthlyGoals.map(g => g.id === id ? { ...g, ...goal, id } : g)
+                    weeklyGoals: state.weeklyGoals.map(g => g.id === id ? { ...g, ...goal, id } : g)
                 }
             }
-            return { monthlyGoals: [...state.monthlyGoals, { ...goal, id }] }
+            return { weeklyGoals: [...state.weeklyGoals, { ...goal, id }] }
+        });
+      },
+
+      setMonthlyNote: (note) => {
+        const id = `${note.year}-${note.month}`;
+        set((state) => {
+            const existingNote = state.monthlyNotes.find(n => n.id === id);
+            if (existingNote) {
+                return {
+                    monthlyNotes: state.monthlyNotes.map(n => n.id === id ? { ...n, ...note, id } : n)
+                }
+            }
+            return { monthlyNotes: [...state.monthlyNotes, { ...note, id }] };
         });
       },
       
