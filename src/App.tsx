@@ -13,6 +13,7 @@ import Categories from "./pages/Categories";
 import SpecialDates from "./pages/SpecialDates";
 import Savings from "./pages/Savings";
 import Settings from "./pages/Settings";
+import Reports from "./pages/Reports"; // Importe a nova página
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,6 +42,13 @@ const App = () => (
             <AuthGuard>
               <MainLayout>
                 <Transactions />
+              </MainLayout>
+            </AuthGuard>
+          } />
+           <Route path="/reports" element={ // Adicione a nova rota
+            <AuthGuard>
+              <MainLayout>
+                <Reports />
               </MainLayout>
             </AuthGuard>
           } />
