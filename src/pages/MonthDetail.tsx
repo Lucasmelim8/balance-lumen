@@ -1,76 +1,98 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Edit, Save, X } from 'lucide-react';
+import { ArrowLeft, Edit, Save, X, Calendar, StickyNote } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
-import { useFinanceStore, Transaction } from '@/store/financeStore';
-import { format } from 'date-fns';
+import { Textarea } from '@/components/ui/textarea';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useFinanceStore } from '../store/financeStore';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount);
 
+const getWeeksOfMonth = (year: number, month: number) => {
+    const startDate = startOfMonth(new Date(year, month));
+    const endDate = endOfMonth(new Date(year, month));
+    const days = eachDayOfInterval({ start: startDate, end: endDate });
+    const weeks: Date[][] = [];
+    let currentWeek: Date[] = [];
+
+    // Agrupa os dias em semanas, começando na segunda-feira (1)
+    days.forEach(day => {
+        if (currentWeek.length > 0 && getDay(day) === 1) { // 1 = Segunda-feira
+            weeks.push(currentWeek);
+            currentWeek = [];
+        }
+        currentWeek.push(day);
+    });
+    if (currentWeek.length > 0) {
+        weeks.push(currentWeek);
+    }
+    return weeks;
+};
+
 export default function MonthDetail() {
-  const { year, month } = useParams<{ year: string, month: string }>();
-  const { transactions, categories, monthlyGoals, setMonthlyGoal } = useFinanceStore();
+  const { year, month } = useParams<{ year: string; month: string }>();
+  const { transactions, categories, weeklyGoals, setWeeklyGoal, specialDates, monthlyNotes, setMonthlyNote } = useFinanceStore();
 
-  const [editingGoals, setEditingGoals] = useState<Record<string, string>>({});
+  const [editingGoals, setEditingGoals] = useState<Record<string, (number | undefined)[]>>({});
   const [isEditing, setIsEditing] = useState(false);
+  const [noteContent, setNoteContent] = useState('');
 
-  // Convertendo os parâmetros da URL para números
   const numericYear = parseInt(year || '0', 10);
   const numericMonth = parseInt(month || '0', 10);
 
-  // Obtendo o nome do mês a partir do índice (0-11)
-  const monthName = useMemo(() => {
+  useEffect(() => {
+    const note = monthlyNotes.find(n => n.year === numericYear && n.month === numericMonth);
+    setNoteContent(note?.content || '');
+  }, [numericYear, numericMonth, monthlyNotes]);
+
+  const { monthName, weeks, relevantSpecialDates } = useMemo(() => {
     if (isNaN(numericYear) || isNaN(numericMonth) || numericMonth < 0 || numericMonth > 11) {
-      return '';
+      return { monthName: '', weeks: [], relevantSpecialDates: [] };
     }
-    return format(new Date(numericYear, numericMonth, 1), 'MMMM', { locale: ptBR });
-  }, [numericYear, numericMonth]);
+    const date = new Date(numericYear, numericMonth, 1);
+    const weeksOfMonth = getWeeksOfMonth(numericYear, numericMonth);
+    const monthNameStr = format(date, 'MMMM', { locale: ptBR });
+    const relevantDates = specialDates.filter(d => {
+        const specialDate = new Date(d.date);
+        return specialDate.getFullYear() === numericYear && specialDate.getMonth() === numericMonth;
+    });
+    return { monthName: monthNameStr, weeks: weeksOfMonth, relevantSpecialDates: relevantDates };
+  }, [numericYear, numericMonth, specialDates]);
 
   const expenseCategories = categories.filter(c => c.type === 'expense');
 
-  const monthlyData = useMemo(() => {
-    // Verificação para garantir que os dados são válidos
-    if (isNaN(numericYear) || isNaN(numericMonth)) {
-      return { expensesByCategory: {}, totalIncome: 0, totalExpense: 0, balance: 0 };
-    }
+  const weeklyExpenses = useMemo(() => {
+    const expenses: Record<string, number[]> = {};
+    expenseCategories.forEach(cat => expenses[cat.id] = Array(weeks.length).fill(0));
 
-    const relevantTransactions = transactions.filter(t => {
+    transactions.forEach(t => {
       const date = new Date(t.date);
-      return date.getFullYear() === numericYear && date.getMonth() === numericMonth;
-    });
-
-    const expensesByCategory: Record<string, { total: number, transactions: Transaction[] }> = {};
-    let totalIncome = 0;
-    let totalExpense = 0;
-
-    relevantTransactions.forEach(t => {
-      if (t.type === 'income') {
-        totalIncome += t.amount;
-      } else {
-        if (!expensesByCategory[t.categoryId]) {
-          expensesByCategory[t.categoryId] = { total: 0, transactions: [] };
+      if (t.type === 'expense' && date.getFullYear() === numericYear && date.getMonth() === numericMonth) {
+        const weekIndex = weeks.findIndex(week => week.some(day => day.toDateString() === date.toDateString()));
+        if (weekIndex !== -1 && expenses[t.categoryId]) {
+          expenses[t.categoryId][weekIndex] += t.amount;
         }
-        expensesByCategory[t.categoryId].total += t.amount;
-        expensesByCategory[t.categoryId].transactions.push(t);
-        totalExpense += t.amount;
       }
     });
+    return expenses;
+  }, [numericYear, numericMonth, transactions, expenseCategories, weeks]);
 
-    return { expensesByCategory, totalIncome, totalExpense, balance: totalIncome - totalExpense };
-  }, [numericYear, numericMonth, transactions]);
-
-  const handleGoalChange = (categoryId: string, value: string) => {
-    setEditingGoals(prev => ({ ...prev, [categoryId]: value }));
+  const handleGoalChange = (categoryId: string, weekIndex: number, value: string) => {
+    const newGoals = { ...editingGoals };
+    if (!newGoals[categoryId]) {
+      newGoals[categoryId] = Array(weeks.length).fill(undefined);
+    }
+    newGoals[categoryId][weekIndex] = parseFloat(value) || 0;
+    setEditingGoals(newGoals);
   };
   
   const handleSaveGoals = () => {
-    Object.entries(editingGoals).forEach(([categoryId, amountStr]) => {
-      const amount = parseFloat(amountStr) || 0;
-      setMonthlyGoal({ year: numericYear, month: numericMonth, categoryId, amount });
+    Object.entries(editingGoals).forEach(([categoryId, weeklyAmounts]) => {
+      setWeeklyGoal({ year: numericYear, month: numericMonth, categoryId, weeklyAmounts });
     });
     setIsEditing(false);
   };
@@ -81,22 +103,19 @@ export default function MonthDetail() {
   }
 
   const handleStartEditing = () => {
-    const initialEditingGoals = expenseCategories.reduce((acc, category) => {
-        const goal = monthlyGoals.find(g => g.year === numericYear && g.month === numericMonth && g.categoryId === category.id);
-        acc[category.id] = goal ? goal.amount.toString() : '0';
+    const initialGoals = expenseCategories.reduce((acc, category) => {
+        const goal = weeklyGoals.find(g => g.year === numericYear && g.month === numericMonth && g.categoryId === category.id);
+        acc[category.id] = goal ? [...goal.weeklyAmounts] : Array(weeks.length).fill(undefined);
         return acc;
-    }, {} as Record<string, string>);
-    setEditingGoals(initialEditingGoals);
+    }, {} as Record<string, (number | undefined)[]>);
+    setEditingGoals(initialGoals);
     setIsEditing(true);
   }
 
-  const totalGoal = expenseCategories.reduce((sum, cat) => {
-      const goal = monthlyGoals.find(g => g.year === numericYear && g.month === numericMonth && g.categoryId === cat.id);
-      return sum + (goal?.amount || 0);
-  }, 0);
-  const totalActual = monthlyData.totalExpense;
+  const handleSaveNote = () => {
+    setMonthlyNote({ year: numericYear, month: numericMonth, content: noteContent });
+  };
   
-  // Adicionando uma verificação para o caso de ano/mês inválido
   if (!monthName) {
     return (
         <div>
@@ -111,134 +130,138 @@ export default function MonthDetail() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <Button variant="ghost" asChild className="mb-4">
-          <Link to="/reports"><ArrowLeft className="mr-2 h-4 w-4" /> Voltar para Relatórios</Link>
-        </Button>
-        <h1 className="text-3xl font-bold tracking-tight capitalize">{monthName} de {year}</h1>
-        <p className="text-muted-foreground">Detalhes de suas finanças para o mês selecionado.</p>
-      </div>
+        <div>
+            <Button variant="ghost" asChild className="mb-4">
+            <Link to="/reports"><ArrowLeft className="mr-2 h-4 w-4" /> Voltar para Relatórios</Link>
+            </Button>
+            <h1 className="text-3xl font-bold tracking-tight capitalize">{monthName} de {year}</h1>
+            <p className="text-muted-foreground">Planeje e acompanhe seus gastos do mês.</p>
+        </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-          <Card><CardHeader><CardTitle>Receitas</CardTitle></CardHeader><CardContent className="text-2xl font-bold text-success">{formatCurrency(monthlyData.totalIncome)}</CardContent></Card>
-          <Card><CardHeader><CardTitle>Despesas</CardTitle></CardHeader><CardContent className="text-2xl font-bold text-destructive">{formatCurrency(monthlyData.totalExpense)}</CardContent></Card>
-          <Card><CardHeader><CardTitle>Saldo</CardTitle></CardHeader><CardContent className={`text-2xl font-bold ${monthlyData.balance >= 0 ? 'text-foreground' : 'text-destructive'}`}>{formatCurrency(monthlyData.balance)}</CardContent></Card>
-      </div>
+        <div className="grid gap-6 lg:grid-cols-3">
+            <div className="lg:col-span-2 space-y-6">
+                <Card>
+                    <CardHeader>
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <CardTitle>Planejamento de Metas Semanais</CardTitle>
+                                <CardDescription>Defina seus limites de gastos para cada semana.</CardDescription>
+                            </div>
+                            {isEditing ? (
+                                <div className="flex gap-2">
+                                    <Button size="sm" onClick={handleSaveGoals}><Save className="mr-2 h-4 w-4"/> Salvar</Button>
+                                    <Button size="sm" variant="outline" onClick={handleCancelEdit}><X className="mr-2 h-4 w-4"/> Cancelar</Button>
+                                </div>
+                            ) : (
+                                <Button size="sm" variant="outline" onClick={handleStartEditing}><Edit className="mr-2 h-4 w-4"/> Definir Metas</Button>
+                            )}
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Categoria</TableHead>
+                                    {weeks.map((_, i) => <TableHead key={i} className="text-right">{i + 1}ª sem.</TableHead>)}
+                                    <TableHead className="text-right font-bold">Total</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                            {expenseCategories.map(cat => {
+                                const categoryGoals = isEditing 
+                                    ? (editingGoals[cat.id] || []) 
+                                    : (weeklyGoals.find(g => g.year === numericYear && g.month === numericMonth && g.categoryId === cat.id)?.weeklyAmounts || []);
+                                const monthlyTotal = categoryGoals.reduce((sum, val) => sum + (val || 0), 0);
 
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle>Metas vs. Gastos Reais</CardTitle>
-              <CardDescription>Compare o planejado com o que foi efetivamente gasto.</CardDescription>
+                                return (
+                                <TableRow key={cat.id}>
+                                    <TableCell className="font-medium">{cat.name}</TableCell>
+                                    {weeks.map((_, weekIndex) => (
+                                    <TableCell key={weekIndex} className="text-right">
+                                        {isEditing ? (
+                                        <Input 
+                                            type="number"
+                                            placeholder="0,00"
+                                            defaultValue={categoryGoals[weekIndex] || ''}
+                                            onChange={(e) => handleGoalChange(cat.id, weekIndex, e.target.value)}
+                                            className="h-8 w-24 text-right ml-auto"
+                                        />
+                                        ) : (
+                                        formatCurrency(categoryGoals[weekIndex] || 0)
+                                        )}
+                                    </TableCell>
+                                    ))}
+                                    <TableCell className="text-right font-bold">{formatCurrency(monthlyTotal)}</TableCell>
+                                </TableRow>
+                                );
+                            })}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader><CardTitle>Acompanhamento de Gastos Reais</CardTitle></CardHeader>
+                    <CardContent>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Categoria</TableHead>
+                                    {weeks.map((_, i) => <TableHead key={i} className="text-right">{i + 1}ª sem.</TableHead>)}
+                                    <TableHead className="text-right font-bold">Total</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                            {expenseCategories.map(cat => {
+                                const weeklyData = weeklyExpenses[cat.id] || Array(weeks.length).fill(0);
+                                const monthlyTotal = weeklyData.reduce((sum, val) => sum + val, 0);
+                                return (
+                                <TableRow key={cat.id}>
+                                    <TableCell className="font-medium">{cat.name}</TableCell>
+                                    {weeklyData.map((amount, weekIndex) => (
+                                        <TableCell key={weekIndex} className="text-right">{formatCurrency(amount)}</TableCell>
+                                    ))}
+                                    <TableCell className="text-right font-bold">{formatCurrency(monthlyTotal)}</TableCell>
+                                </TableRow>
+                                );
+                            })}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
             </div>
-            {isEditing ? (
-                 <div className="flex gap-2">
-                    <Button size="sm" onClick={handleSaveGoals}><Save className="mr-2 h-4 w-4"/> Salvar</Button>
-                    <Button size="sm" variant="outline" onClick={handleCancelEdit}><X className="mr-2 h-4 w-4"/> Cancelar</Button>
-                 </div>
-            ) : (
-                <Button size="sm" variant="outline" onClick={handleStartEditing}><Edit className="mr-2 h-4 w-4"/> Definir Metas</Button>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Categoria</TableHead>
-                <TableHead className="text-right">Meta</TableHead>
-                <TableHead className="text-right">Realizado</TableHead>
-                <TableHead className="text-right">Diferença</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {expenseCategories.map(category => {
-                const goal = monthlyGoals.find(g => g.year === numericYear && g.month === numericMonth && g.categoryId === category.id);
-                const actual = monthlyData.expensesByCategory[category.id]?.total || 0;
-                const goalAmount = isEditing ? parseFloat(editingGoals[category.id]) || 0 : goal?.amount || 0;
-                const difference = goalAmount - actual;
-                return (
-                  <TableRow key={category.id}>
-                    <TableCell className="font-medium">{category.name}</TableCell>
-                    <TableCell className="text-right">
-                        {isEditing ? (
-                            <Input 
-                                type="number" 
-                                value={editingGoals[category.id] || ''} 
-                                onChange={(e) => handleGoalChange(category.id, e.target.value)}
-                                className="h-8 text-right"
-                                placeholder="0,00"
-                            />
+            <div className="lg:col-span-1 space-y-6">
+                <Card>
+                    <CardHeader><CardTitle className="flex items-center gap-2"><StickyNote className="h-5 w-5"/>Anotações do Mês</CardTitle></CardHeader>
+                    <CardContent className="space-y-2">
+                        <Textarea 
+                            placeholder="Adicione suas anotações para este mês..." 
+                            rows={5}
+                            value={noteContent}
+                            onChange={(e) => setNoteContent(e.target.value)}
+                        />
+                        <Button onClick={handleSaveNote} className="w-full">Salvar Anotação</Button>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader><CardTitle className="flex items-center gap-2"><Calendar className="h-5 w-5"/>Datas Especiais</CardTitle></CardHeader>
+                    <CardContent>
+                        {relevantSpecialDates.length > 0 ? (
+                            <ul className="space-y-2">
+                                {relevantSpecialDates.map(d => (
+                                    <li key={d.id} className="text-sm">
+                                        <span className="font-semibold">{format(new Date(d.date), 'dd/MM')}</span>: {d.name}
+                                    </li>
+                                ))}
+                            </ul>
                         ) : (
-                            formatCurrency(goalAmount)
+                            <p className="text-sm text-muted-foreground">Nenhuma data especial este mês.</p>
                         )}
-                    </TableCell>
-                    <TableCell className="text-right">{formatCurrency(actual)}</TableCell>
-                    <TableCell className={`text-right font-medium ${difference >= 0 ? 'text-success' : 'text-destructive'}`}>
-                      {formatCurrency(difference)}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-             <TableFooter>
-                <TableRow className="font-bold text-base">
-                    <TableCell>Total</TableCell>
-                    <TableCell className="text-right">{formatCurrency(isEditing ? Object.values(editingGoals).reduce((s, a) => s + (parseFloat(a) || 0), 0) : totalGoal)}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(totalActual)}</TableCell>
-                    <TableCell className={`text-right ${totalGoal - totalActual >= 0 ? 'text-success' : 'text-destructive'}`}>
-                        {formatCurrency(totalGoal - totalActual)}
-                    </TableCell>
-                </TableRow>
-            </TableFooter>
-          </Table>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardHeader>
-          <CardTitle>Detalhes dos Gastos Reais</CardTitle>
-          <CardDescription>Todas as despesas do mês, agrupadas por categoria.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {expenseCategories.map(category => {
-            const categoryExpenses = monthlyData.expensesByCategory[category.id];
-            if (!categoryExpenses || categoryExpenses.transactions.length === 0) return null;
-
-            return (
-              <div key={category.id} className="mb-6">
-                <h3 className="font-semibold text-lg mb-2">{category.name}</h3>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Descrição</TableHead>
-                      <TableHead className="text-right">Valor</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {categoryExpenses.transactions.map(t => (
-                      <TableRow key={t.id}>
-                        <TableCell>{format(new Date(t.date), 'dd/MM/yyyy', { locale: ptBR })}</TableCell>
-                        <TableCell>{t.description}</TableCell>
-                        <TableCell className="text-right text-destructive">{formatCurrency(t.amount)}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                   <TableFooter>
-                        <TableRow>
-                            <TableCell colSpan={2} className="font-bold">Subtotal</TableCell>
-                            <TableCell className="text-right font-bold">{formatCurrency(categoryExpenses.total)}</TableCell>
-                        </TableRow>
-                   </TableFooter>
-                </Table>
-              </div>
-            );
-          })}
-           {monthlyData.totalExpense === 0 && <p className="text-center text-muted-foreground py-4">Nenhuma despesa registrada para este mês.</p>}
-        </CardContent>
-      </Card>
+                    </CardContent>
+                </Card>
+            </div>
+        </div>
     </div>
   );
 }
+
