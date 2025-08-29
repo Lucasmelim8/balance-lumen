@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BarChart, ArrowDown, ArrowUp, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { BarChart, ArrowDown, ArrowUp, TrendingUp, TrendingDown } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
@@ -36,7 +36,7 @@ export default function Reports() {
   const monthlyData = useMemo(() => {
     const data = Array.from({ length: 12 }, (_, i) => ({
       month: i,
-      monthName: format(new Date(2000, i), 'MMMM', { locale: ptBR }),
+      monthName: format(new Date(2000, i, 1), 'MMMM', { locale: ptBR }),
       income: 0,
       expense: 0,
     }));
@@ -56,8 +56,9 @@ export default function Reports() {
     return data;
   }, [transactions, selectedYear]);
   
-  const handleMonthClick = (month: number) => {
-    navigate(`/reports/${selectedYear}/${month}`);
+  // A função de clique agora passa o índice do mês (0-11)
+  const handleMonthClick = (monthIndex: number) => {
+    navigate(`/reports/${selectedYear}/${monthIndex}`);
   };
 
   return (
@@ -91,6 +92,7 @@ export default function Reports() {
             <Card 
               key={month} 
               className={`transition-all hover:shadow-large hover:-translate-y-1 cursor-pointer ${!hasData && 'opacity-60'}`}
+              // Certifique-se de que o clique só funciona se houver dados
               onClick={() => hasData && handleMonthClick(month)}
             >
               <CardHeader>
