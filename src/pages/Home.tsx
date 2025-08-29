@@ -354,7 +354,7 @@ export default function Home() {
 
       {/* Modal para Adicionar/Editar Conta */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>{currentAccount ? 'Editar Conta' : 'Adicionar Nova Conta'}</DialogTitle>
             <DialogDescription>
@@ -395,7 +395,7 @@ export default function Home() {
 
       {/* Modal de Confirmação de Exclusão */}
       <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Confirmar Exclusão</DialogTitle>
             <DialogDescription>

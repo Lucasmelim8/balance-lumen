@@ -112,7 +112,7 @@ export default function SpecialDates() {
               Nova Data
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>
                 {editingDate ? 'Editar Data Especial' : 'Nova Data Especial'}

@@ -205,7 +205,7 @@ export default function Savings() {
               Nova Meta
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>
                 {editingGoal ? 'Editar Meta' : 'Nova Meta de Economia'}
@@ -311,7 +311,7 @@ export default function Savings() {
 
       {/* Transaction Dialog */}
       <Dialog open={isTransactionDialogOpen} onOpenChange={setIsTransactionDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>{transactionType === 'add' ? 'Adicionar Dinheiro' : 'Retirar Dinheiro'}</DialogTitle>
             <DialogDescription>
