@@ -16,7 +16,6 @@ export interface Transaction {
   categoryId: string;
   accountId: string;
   type: 'income' | 'expense';
-  paymentType?: 'single' | 'monthly' | 'recurring';
 }
 
 export interface Category {
@@ -43,15 +42,16 @@ export interface SavingsGoal {
   createdAt: string;
 }
 
-export interface MonthlyGoal {
+// Metas Mensais por semana
+export interface WeeklyGoal {
   id: string; // ex: "2024-08-cat1"
   year: number;
   month: number; // 0-11
   categoryId: string;
   weeklyAmounts: (number | undefined)[];
-  monthlyAmount?: number;
 }
 
+// Anotações Mensais
 export interface MonthlyNote {
     id: string; // ex: "2024-08"
     year: number;
@@ -66,7 +66,7 @@ interface FinanceState {
   categories: Category[];
   specialDates: SpecialDate[];
   savingsGoals: SavingsGoal[];
-  monthlyGoals: MonthlyGoal[];
+  weeklyGoals: WeeklyGoal[]; 
   monthlyNotes: MonthlyNote[];
 
   // Account methods
@@ -95,8 +95,10 @@ interface FinanceState {
   removeSavingsGoal: (id: string) => void;
   addToSavingsGoal: (id: string, amount: number) => void;
 
-  // Monthly goals and notes methods
-  setMonthlyGoal: (goal: Omit<MonthlyGoal, 'id'>) => void;
+  // Métodos para Metas Semanais
+  setWeeklyGoal: (goal: Omit<WeeklyGoal, 'id'>) => void;
+
+  // Métodos para Anotações Mensais
   setMonthlyNote: (note: Omit<MonthlyNote, 'id'>) => void;
   
   // Getters
@@ -118,10 +120,6 @@ const initialAccounts: Account[] = [
   { id: '2', name: 'Poupança', balance: 8000, type: 'savings' },
 ];
 
-const initialMonthlyGoals: MonthlyGoal[] = [
-    { id: '2025-7-1', year: 2025, month: 7, categoryId: '1', weeklyAmounts: [200, 200, 200, 200, 0], monthlyAmount: 0 },
-    { id: '2025-7-2', year: 2025, month: 7, categoryId: '2', weeklyAmounts: [50, 50, 75, 75, 0], monthlyAmount: 0 },
-]
 
 export const useFinanceStore = create<FinanceState>()(
   persist(
@@ -131,40 +129,122 @@ export const useFinanceStore = create<FinanceState>()(
       categories: initialCategories,
       specialDates: [],
       savingsGoals: [],
-      monthlyGoals: initialMonthlyGoals,
+      weeklyGoals: [],
       monthlyNotes: [],
       
-      addAccount: (account) => set((state) => ({ accounts: [...state.accounts, { ...account, id: Date.now().toString() }] })),
-      updateAccount: (id, account) => set((state) => ({ accounts: state.accounts.map((acc) => acc.id === id ? { ...acc, ...account } : acc) })),
-      removeAccount: (id) => set((state) => ({ accounts: state.accounts.filter((acc) => acc.id !== id) })),
+      // Account methods
+      addAccount: (account) => {
+        const newAccount = { ...account, id: Date.now().toString() };
+        set((state) => ({ accounts: [...state.accounts, newAccount] }));
+      },
+      updateAccount: (id, account) => {
+        set((state) => ({
+          accounts: state.accounts.map((acc) =>
+            acc.id === id ? { ...acc, ...account } : acc
+          ),
+        }));
+      },
+      removeAccount: (id) => {
+        set((state) => ({
+          accounts: state.accounts.filter((acc) => acc.id !== id),
+        }));
+      },
       
-      addTransaction: (transaction) => set((state) => ({ transactions: [...state.transactions, { ...transaction, id: Date.now().toString() }] })),
-      updateTransaction: (id, transaction) => set((state) => ({ transactions: state.transactions.map((tx) => tx.id === id ? { ...tx, ...transaction } : tx) })),
-      removeTransaction: (id) => set((state) => ({ transactions: state.transactions.filter((tx) => tx.id !== id) })),
+      // Transaction methods  
+      addTransaction: (transaction) => {
+        const newTransaction = { ...transaction, id: Date.now().toString() };
+        set((state) => ({ transactions: [...state.transactions, newTransaction] }));
+      },
+      updateTransaction: (id, transaction) => {
+        set((state) => ({
+          transactions: state.transactions.map((tx) =>
+            tx.id === id ? { ...tx, ...transaction } : tx
+          ),
+        }));
+      },
+      removeTransaction: (id) => {
+        set((state) => ({
+          transactions: state.transactions.filter((tx) => tx.id !== id),
+        }));
+      },
       
-      addCategory: (category) => set((state) => ({ categories: [...state.categories, { ...category, id: Date.now().toString() }] })),
-      updateCategory: (id, category) => set((state) => ({ categories: state.categories.map((cat) => cat.id === id ? { ...cat, ...category } : cat) })),
-      removeCategory: (id) => set((state) => ({ categories: state.categories.filter((cat) => cat.id !== id) })),
+      // Category methods
+      addCategory: (category) => {
+        const newCategory = { ...category, id: Date.now().toString() };
+        set((state) => ({ categories: [...state.categories, newCategory] }));
+      },
+      updateCategory: (id, category) => {
+        set((state) => ({
+          categories: state.categories.map((cat) =>
+            cat.id === id ? { ...cat, ...category } : cat
+          ),
+        }));
+      },
+      removeCategory: (id) => {
+        set((state) => ({
+          categories: state.categories.filter((cat) => cat.id !== id),
+        }));
+      },
       
-      addSpecialDate: (date) => set((state) => ({ specialDates: [...state.specialDates, { ...date, id: Date.now().toString() }] })),
-      updateSpecialDate: (id, date) => set((state) => ({ specialDates: state.specialDates.map((sd) => sd.id === id ? { ...sd, ...date } : sd) })),
-      removeSpecialDate: (id) => set((state) => ({ specialDates: state.specialDates.filter((sd) => sd.id !== id) })),
+      // Special dates methods
+      addSpecialDate: (date) => {
+        const newDate = { ...date, id: Date.now().toString() };
+        set((state) => ({ specialDates: [...state.specialDates, newDate] }));
+      },
+      updateSpecialDate: (id, date) => {
+        set((state) => ({
+          specialDates: state.specialDates.map((sd) =>
+            sd.id === id ? { ...sd, ...date } : sd
+          ),
+        }));
+      },
+      removeSpecialDate: (id) => {
+        set((state) => ({
+          specialDates: state.specialDates.filter((sd) => sd.id !== id),
+        }));
+      },
       
-      addSavingsGoal: (goal) => set((state) => ({ savingsGoals: [...state.savingsGoals, { ...goal, id: Date.now().toString(), createdAt: new Date().toISOString() }] })),
-      updateSavingsGoal: (id, goal) => set((state) => ({ savingsGoals: state.savingsGoals.map((sg) => sg.id === id ? { ...sg, ...goal } : sg) })),
-      removeSavingsGoal: (id) => set((state) => ({ savingsGoals: state.savingsGoals.filter((sg) => sg.id !== id) })),
-      addToSavingsGoal: (id, amount) => set((state) => ({
-          savingsGoals: state.savingsGoals.map((sg) => sg.id === id ? { ...sg, currentAmount: Math.min(sg.currentAmount + amount, sg.targetAmount) } : sg),
-      })),
+      // Savings goals methods
+      addSavingsGoal: (goal) => {
+        const newGoal = { 
+          ...goal, 
+          id: Date.now().toString(),
+          createdAt: new Date().toISOString()
+        };
+        set((state) => ({ savingsGoals: [...state.savingsGoals, newGoal] }));
+      },
+      updateSavingsGoal: (id, goal) => {
+        set((state) => ({
+          savingsGoals: state.savingsGoals.map((sg) =>
+            sg.id === id ? { ...sg, ...goal } : sg
+          ),
+        }));
+      },
+      removeSavingsGoal: (id) => {
+        set((state) => ({
+          savingsGoals: state.savingsGoals.filter((sg) => sg.id !== id),
+        }));
+      },
+      addToSavingsGoal: (id, amount) => {
+        set((state) => ({
+          savingsGoals: state.savingsGoals.map((sg) =>
+            sg.id === id 
+              ? { ...sg, currentAmount: Math.min(sg.currentAmount + amount, sg.targetAmount) }
+              : sg
+          ),
+        }));
+      },
 
-      setMonthlyGoal: (goal) => {
+      setWeeklyGoal: (goal) => {
         const id = `${goal.year}-${goal.month}-${goal.categoryId}`;
         set((state) => {
-            const existingGoal = state.monthlyGoals.find(g => g.id === id);
+            const existingGoal = state.weeklyGoals.find(g => g.id === id);
             if (existingGoal) {
-                return { monthlyGoals: state.monthlyGoals.map(g => g.id === id ? { ...g, ...goal, id } : g) }
+                return {
+                    weeklyGoals: state.weeklyGoals.map(g => g.id === id ? { ...g, ...goal, id } : g)
+                }
             }
-            return { monthlyGoals: [...state.monthlyGoals, { ...goal, id }] }
+            return { weeklyGoals: [...state.weeklyGoals, { ...goal, id }] }
         });
       },
 
@@ -172,31 +252,47 @@ export const useFinanceStore = create<FinanceState>()(
         const id = `${note.year}-${note.month}`;
         set((state) => {
             const existingNote = state.monthlyNotes.find(n => n.id === id);
-            if(existingNote) {
-                return { monthlyNotes: state.monthlyNotes.map(n => n.id === id ? {...n, ...note, id} : n) }
+            if (existingNote) {
+                return {
+                    monthlyNotes: state.monthlyNotes.map(n => n.id === id ? { ...n, ...note, id } : n)
+                }
             }
-            return { monthlyNotes: [...state.monthlyNotes, {...note, id}] }
+            return { monthlyNotes: [...state.monthlyNotes, { ...note, id }] };
         });
       },
       
-      getTotalBalance: () => get().accounts.reduce((total, account) => total + account.balance, 0),
+      // Getters
+      getTotalBalance: () => {
+        const { accounts } = get();
+        return accounts.reduce((total, account) => total + account.balance, 0);
+      },
       getTotalIncome: (month, year) => {
         const { transactions } = get();
         const currentMonth = month ?? new Date().getMonth();
         const currentYear = year ?? new Date().getFullYear();
-        return transactions.filter((tx) => {
+        
+        return transactions
+          .filter((tx) => {
             const txDate = new Date(tx.date);
-            return tx.type === 'income' && txDate.getMonth() === currentMonth && txDate.getFullYear() === currentYear;
-        }).reduce((total, tx) => total + tx.amount, 0);
+            const matchMonth = month === undefined ? true : txDate.getMonth() === currentMonth;
+            const matchYear = year === undefined ? true : txDate.getFullYear() === currentYear;
+            return tx.type === 'income' && matchMonth && matchYear;
+          })
+          .reduce((total, tx) => total + tx.amount, 0);
       },
       getTotalExpenses: (month, year) => {
         const { transactions } = get();
         const currentMonth = month ?? new Date().getMonth();
         const currentYear = year ?? new Date().getFullYear();
-        return transactions.filter((tx) => {
+        
+        return transactions
+          .filter((tx) => {
             const txDate = new Date(tx.date);
-            return tx.type === 'expense' && txDate.getMonth() === currentMonth && txDate.getFullYear() === currentYear;
-        }).reduce((total, tx) => total + tx.amount, 0);
+            const matchMonth = month === undefined ? true : txDate.getMonth() === currentMonth;
+            const matchYear = year === undefined ? true : txDate.getFullYear() === currentYear;
+            return tx.type === 'expense' && matchMonth && matchYear;
+          })
+          .reduce((total, tx) => total + tx.amount, 0);
       },
     }),
     {
@@ -204,4 +300,3 @@ export const useFinanceStore = create<FinanceState>()(
     }
   )
 );
-
