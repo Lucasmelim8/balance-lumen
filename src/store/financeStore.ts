@@ -16,6 +16,7 @@ export interface Transaction {
   categoryId: string;
   accountId: string;
   type: 'income' | 'expense';
+  paymentType?: 'single' | 'monthly' | 'recurring';
 }
 
 export interface Category {
@@ -40,6 +41,7 @@ export interface SavingsGoal {
   targetAmount: number;
   currentAmount: number;
   createdAt: string;
+  targetDate?: string | null;
 }
 
 // Metas Mensais por semana
@@ -49,6 +51,7 @@ export interface WeeklyGoal {
   month: number; // 0-11
   categoryId: string;
   weeklyAmounts: (number | undefined)[];
+  monthlyAmount?: number;
 }
 
 // Anotações Mensais
@@ -300,3 +303,4 @@ export const useFinanceStore = create<FinanceState>()(
     }
   )
 );
+
