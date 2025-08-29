@@ -1,97 +1,165 @@
-import { Bell, LogOut, User, Settings } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { useAuthStore } from '@/store/authStore';
-import { SidebarTrigger } from '@/components/ui/sidebar';
+} from '@/components/ui/dropdown-menu'
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
+import { useAuth } from '@/store/authStore'
+import { CircleUser, Menu, Package2 } from 'lucide-react'
+import { Link, NavLink } from 'react-router-dom'
+import { Button } from '@/components/ui/button'
+import Clock from './Clock'
 
 export function Navbar() {
-  const { user, logout } = useAuthStore();
+  const { user, logout } = useAuth()
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-card shadow-soft">
-      <div className="flex h-16 items-center px-6">
-        {/* Left - Sidebar Toggle (Mobile) */}
-        <div className="flex items-center gap-4">
-          <SidebarTrigger className="md:hidden" />
-        </div>
-
-        {/* Center - Empty (flexible spacing) */}
-        <div className="flex-1" />
-
-        {/* Right - Notifications and User Menu */}
-        <div className="flex items-center gap-3">
-          {/* Notifications Dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="h-5 w-5" />
-                <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-72">
-              <div className="px-3 py-2 text-sm font-medium">Notificações</div>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link to="/transactions" className="flex items-center text-sm">
-                  Nova transação adicionada
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link to="/savings" className="flex items-center text-sm">
-                  Você alcançou sua meta da Caixinha 🎉
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link to="/special-dates" className="flex items-center text-sm">
-                  Lembre-se: Data especial amanhã
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <div className="px-3 py-2 text-xs text-muted-foreground">
-                Ver todas as notificações
-              </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* User Menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="flex items-center gap-3 px-3 py-2 h-auto">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-primary text-primary-foreground">
-                    {user?.name?.charAt(0).toUpperCase() || 'U'}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="hidden sm:block text-left">
-                  <div className="text-sm font-medium">{user?.name}</div>
-                  <div className="text-xs text-muted-foreground">{user?.email}</div>
-                </div>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem asChild>
-                <Link to="/settings" className="flex items-center">
-                  <Settings className="mr-2 h-4 w-4" />
-                  Configurações
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={logout} className="text-destructive">
-                <LogOut className="mr-2 h-4 w-4" />
-                Sair
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+    <header className="sticky top-0 z-50 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6">
+      <nav className="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6">
+        <Link
+          to="#"
+          className="flex items-center gap-2 text-lg font-semibold md:text-base"
+        >
+          <Package2 className="h-6 w-6" />
+          <span className="sr-only">Acme Inc</span>
+        </Link>
+        <NavLink
+          to="/"
+          className={({ isActive }) =>
+            isActive
+              ? 'text-foreground transition-colors hover:text-foreground'
+              : 'text-muted-foreground transition-colors hover:text-foreground'
+          }
+        >
+          Dashboard
+        </NavLink>
+        <NavLink
+          to="/transactions"
+          className={({ isActive }) =>
+            isActive
+              ? 'text-foreground transition-colors hover:text-foreground'
+              : 'text-muted-foreground transition-colors hover:text-foreground'
+          }
+        >
+          Transações
+        </NavLink>
+        <NavLink
+          to="/categories"
+          className={({ isActive }) =>
+            isActive
+              ? 'text-foreground transition-colors hover:text-foreground'
+              : 'text-muted-foreground transition-colors hover:text-foreground'
+          }
+        >
+          Categorias
+        </NavLink>
+        <NavLink
+          to="/savings"
+          className={({ isActive }) =>
+            isActive
+              ? 'text-foreground transition-colors hover:text-foreground'
+              : 'text-muted-foreground transition-colors hover:text-foreground'
+          }
+        >
+          Poupança
+        </NavLink>
+        <NavLink
+          to="/special-dates"
+          className={({ isActive }) =>
+            isActive
+              ? 'text-foreground transition-colors hover:text-foreground'
+              : 'text-muted-foreground transition-colors hover:text-foreground'
+          }
+        >
+          Datas Especiais
+        </NavLink>
+      </nav>
+      <Sheet>
+        <SheetTrigger asChild>
+          <Button variant="outline" size="icon" className="shrink-0 md:hidden">
+            <Menu className="h-5 w-5" />
+            <span className="sr-only">Toggle navigation menu</span>
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="left">
+          <nav className="grid gap-6 text-lg font-medium">
+            <Link
+              to="#"
+              className="flex items-center gap-2 text-lg font-semibold"
+            >
+              <Package2 className="h-6 w-6" />
+              <span className="sr-only">Acme Inc</span>
+            </Link>
+            <NavLink
+              to="/"
+              className={({ isActive }) =>
+                isActive ? 'text-foreground' : 'text-muted-foreground'
+              }
+            >
+              Dashboard
+            </NavLink>
+            <NavLink
+              to="/transactions"
+              className={({ isActive }) =>
+                isActive ? 'text-foreground' : 'text-muted-foreground'
+              }
+            >
+              Transações
+            </NavLink>
+            <NavLink
+              to="/categories"
+              className={({ isActive }) =>
+                isActive ? 'text-foreground' : 'text-muted-foreground'
+              }
+            >
+              Categorias
+            </NavLink>
+            <NavLink
+              to="/savings"
+              className={({ isActive }) =>
+                isActive ? 'text-foreground' : 'text-muted-foreground'
+              }
+            >
+              Poupança
+            </NavLink>
+            <NavLink
+              to="/special-dates"
+              className={({ isActive }) =>
+                isActive ? 'text-foreground' : 'text-muted-foreground'
+              }
+            >
+              Datas Especiais
+            </NavLink>
+          </nav>
+        </SheetContent>
+      </Sheet>
+      <div className="flex w-full items-center gap-4 md:ml-auto md:gap-2 lg:gap-4">
+        <div className="ml-auto flex-grow" />
+        <Clock />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="secondary" size="icon" className="rounded-full">
+              <CircleUser className="h-5 w-5" />
+              <span className="sr-only">Toggle user menu</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>
+              {user ? user.email : 'Minha Conta'}
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem>
+              <Link to="/settings">Configurações</Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem>Suporte</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={logout}>Sair</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
-  );
+  )
 }
