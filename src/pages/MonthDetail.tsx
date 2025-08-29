@@ -5,8 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useFinanceStore } from '@/store/financeStore';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
+import { useFinanceStore } from '../store/financeStore';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -116,6 +116,29 @@ export default function MonthDetail() {
     setMonthlyNote({ year: numericYear, month: numericMonth, content: noteContent });
   };
   
+  // Totals for Footer
+  const totalGoalsByWeek = useMemo(() => {
+    return weeks.map((_, weekIndex) =>
+      expenseCategories.reduce((sum, cat) => {
+        const categoryGoals = isEditing
+          ? editingGoals[cat.id] || []
+          : weeklyGoals.find(g => g.year === numericYear && g.month === numericMonth && g.categoryId === cat.id)?.weeklyAmounts || [];
+        return sum + (categoryGoals[weekIndex] || 0);
+      }, 0)
+    );
+  }, [isEditing, editingGoals, weeklyGoals, expenseCategories, weeks, numericYear, numericMonth]);
+
+  const grandTotalGoal = totalGoalsByWeek.reduce((sum, val) => sum + val, 0);
+
+  const totalExpensesByWeek = useMemo(() => {
+    return weeks.map((_, weekIndex) =>
+      expenseCategories.reduce((sum, cat) => sum + (weeklyExpenses[cat.id]?.[weekIndex] || 0), 0)
+    );
+  }, [weeklyExpenses, expenseCategories, weeks]);
+  
+  const grandTotalExpense = totalExpensesByWeek.reduce((sum, val) => sum + val, 0);
+
+
   if (!monthName) {
     return (
         <div>
@@ -163,7 +186,7 @@ export default function MonthDetail() {
                                 <TableRow>
                                     <TableHead>Categoria</TableHead>
                                     {weeks.map((_, i) => <TableHead key={i} className="text-right">{i + 1}ª sem.</TableHead>)}
-                                    <TableHead className="text-right font-bold">Total</TableHead>
+                                    <TableHead className="text-right font-bold">Total Mensal</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -184,7 +207,7 @@ export default function MonthDetail() {
                                             placeholder="0,00"
                                             defaultValue={categoryGoals[weekIndex] || ''}
                                             onChange={(e) => handleGoalChange(cat.id, weekIndex, e.target.value)}
-                                            className="h-8 w-24 text-right ml-auto"
+                                            className="h-8 w-20 text-right ml-auto"
                                         />
                                         ) : (
                                         formatCurrency(categoryGoals[weekIndex] || 0)
@@ -196,6 +219,15 @@ export default function MonthDetail() {
                                 );
                             })}
                             </TableBody>
+                             <TableFooter>
+                                <TableRow className="font-bold bg-muted/50">
+                                    <TableCell>Total</TableCell>
+                                    {totalGoalsByWeek.map((total, weekIndex) => (
+                                        <TableCell key={weekIndex} className="text-right">{formatCurrency(total)}</TableCell>
+                                    ))}
+                                    <TableCell className="text-right">{formatCurrency(grandTotalGoal)}</TableCell>
+                                </TableRow>
+                            </TableFooter>
                         </Table>
                     </CardContent>
                 </Card>
@@ -208,7 +240,7 @@ export default function MonthDetail() {
                                 <TableRow>
                                     <TableHead>Categoria</TableHead>
                                     {weeks.map((_, i) => <TableHead key={i} className="text-right">{i + 1}ª sem.</TableHead>)}
-                                    <TableHead className="text-right font-bold">Total</TableHead>
+                                    <TableHead className="text-right font-bold">Total Mensal</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -226,6 +258,15 @@ export default function MonthDetail() {
                                 );
                             })}
                             </TableBody>
+                            <TableFooter>
+                                <TableRow className="font-bold bg-muted/50">
+                                    <TableCell>Total</TableCell>
+                                    {totalExpensesByWeek.map((total, weekIndex) => (
+                                        <TableCell key={weekIndex} className="text-right">{formatCurrency(total)}</TableCell>
+                                    ))}
+                                    <TableCell className="text-right">{formatCurrency(grandTotalExpense)}</TableCell>
+                                </TableRow>
+                            </TableFooter>
                         </Table>
                     </CardContent>
                 </Card>
