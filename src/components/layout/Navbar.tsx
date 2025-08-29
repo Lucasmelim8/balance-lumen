@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuthStore } from '@/store/authStore';
 import { SidebarTrigger } from '@/components/ui/sidebar';
+import { Clock } from './Clock'; // Importe o novo componente
 
 export function Navbar() {
   const { user, logout } = useAuthStore();
@@ -23,8 +24,10 @@ export function Navbar() {
           <SidebarTrigger className="md:hidden" />
         </div>
 
-        {/* Center - Empty (flexible spacing) */}
-        <div className="flex-1" />
+        {/* Center - Clock */}
+        <div className="flex-1 flex items-center justify-center">
+          <Clock />
+        </div>
 
         {/* Right - Notifications and User Menu */}
         <div className="flex items-center gap-3">
