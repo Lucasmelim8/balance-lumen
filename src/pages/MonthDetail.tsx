@@ -65,20 +65,29 @@ export default function MonthDetail() {
 
   const expenseCategories = categories.filter(c => c.type === 'expense');
 
-  const weeklyExpenses = useMemo(() => {
-    const expenses: Record<string, number[]> = {};
-    expenseCategories.forEach(cat => expenses[cat.id] = Array(weeks.length).fill(0));
+  const { weeklyExpenses, monthlyExpenses } = useMemo(() => {
+    const weeklyExp: Record<string, number[]> = {};
+    const monthlyExp: Record<string, number> = {};
+    expenseCategories.forEach(cat => {
+        weeklyExp[cat.id] = Array(weeks.length).fill(0);
+        monthlyExp[cat.id] = 0;
+    });
 
     transactions.forEach(t => {
       const date = new Date(t.date);
       if (t.type === 'expense' && date.getFullYear() === numericYear && date.getMonth() === numericMonth) {
-        const weekIndex = weeks.findIndex(week => week.some(day => day.toDateString() === date.toDateString()));
-        if (weekIndex !== -1 && expenses[t.categoryId]) {
-          expenses[t.categoryId][weekIndex] += t.amount;
+        // Assume 'monthly' paymentType is for expenses not tied to a specific week
+        if (t.paymentType === 'monthly') {
+            monthlyExp[t.categoryId] = (monthlyExp[t.categoryId] || 0) + t.amount;
+        } else {
+            const weekIndex = weeks.findIndex(week => week.some(day => day.toDateString() === date.toDateString()));
+            if (weekIndex !== -1 && weeklyExp[t.categoryId]) {
+              weeklyExp[t.categoryId][weekIndex] += t.amount;
+            }
         }
       }
     });
-    return expenses;
+    return { weeklyExpenses: weeklyExp, monthlyExpenses: monthlyExp };
   }, [numericYear, numericMonth, transactions, expenseCategories, weeks]);
 
   const handleGoalChange = (categoryId: string, weekIndex: number, value: string) => {
@@ -136,7 +145,11 @@ export default function MonthDetail() {
     );
   }, [weeklyExpenses, expenseCategories, weeks]);
   
-  const grandTotalExpense = totalExpensesByWeek.reduce((sum, val) => sum + val, 0);
+  const totalMonthlyExpenses = useMemo(() => {
+    return expenseCategories.reduce((sum, cat) => sum + (monthlyExpenses[cat.id] || 0), 0)
+  }, [monthlyExpenses, expenseCategories]);
+  
+  const grandTotalExpense = totalExpensesByWeek.reduce((sum, val) => sum + val, 0) + totalMonthlyExpenses;
 
 
   if (!monthName) {
@@ -207,7 +220,7 @@ export default function MonthDetail() {
                                             placeholder="0,00"
                                             defaultValue={categoryGoals[weekIndex] || ''}
                                             onChange={(e) => handleGoalChange(cat.id, weekIndex, e.target.value)}
-                                            className="h-8 w-20 text-right ml-auto"
+                                            className="h-8 w-24 text-right ml-auto"
                                         />
                                         ) : (
                                         formatCurrency(categoryGoals[weekIndex] || 0)
@@ -240,20 +253,23 @@ export default function MonthDetail() {
                                 <TableRow>
                                     <TableHead>Categoria</TableHead>
                                     {weeks.map((_, i) => <TableHead key={i} className="text-right">{i + 1}ª sem.</TableHead>)}
-                                    <TableHead className="text-right font-bold">Total Mensal</TableHead>
+                                    <TableHead className="text-right">Gasto Mensal</TableHead>
+                                    <TableHead className="text-right font-bold">Total</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                             {expenseCategories.map(cat => {
                                 const weeklyData = weeklyExpenses[cat.id] || Array(weeks.length).fill(0);
-                                const monthlyTotal = weeklyData.reduce((sum, val) => sum + val, 0);
+                                const monthlyTotal = (monthlyExpenses[cat.id] || 0);
+                                const grandTotal = weeklyData.reduce((sum, val) => sum + val, 0) + monthlyTotal;
                                 return (
                                 <TableRow key={cat.id}>
                                     <TableCell className="font-medium">{cat.name}</TableCell>
                                     {weeklyData.map((amount, weekIndex) => (
                                         <TableCell key={weekIndex} className="text-right">{formatCurrency(amount)}</TableCell>
                                     ))}
-                                    <TableCell className="text-right font-bold">{formatCurrency(monthlyTotal)}</TableCell>
+                                    <TableCell className="text-right">{formatCurrency(monthlyTotal)}</TableCell>
+                                    <TableCell className="text-right font-bold">{formatCurrency(grandTotal)}</TableCell>
                                 </TableRow>
                                 );
                             })}
@@ -264,6 +280,7 @@ export default function MonthDetail() {
                                     {totalExpensesByWeek.map((total, weekIndex) => (
                                         <TableCell key={weekIndex} className="text-right">{formatCurrency(total)}</TableCell>
                                     ))}
+                                    <TableCell className="text-right">{formatCurrency(totalMonthlyExpenses)}</TableCell>
                                     <TableCell className="text-right">{formatCurrency(grandTotalExpense)}</TableCell>
                                 </TableRow>
                             </TableFooter>
@@ -305,4 +322,3 @@ export default function MonthDetail() {
     </div>
   );
 }
-
