@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Edit, Plus, Save, X, Trash2 } from 'lucide-react';
+import { ArrowLeft, Edit, Save, X } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
-import { useFinanceStore, Category, Transaction } from '@/store/financeStore';
+import { useFinanceStore, Transaction } from '@/store/financeStore';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -18,13 +18,26 @@ export default function MonthDetail() {
   const [editingGoals, setEditingGoals] = useState<Record<string, string>>({});
   const [isEditing, setIsEditing] = useState(false);
 
-  const numericYear = parseInt(year || '0');
-  const numericMonth = parseInt(month || '0');
+  // Convertendo os parâmetros da URL para números
+  const numericYear = parseInt(year || '0', 10);
+  const numericMonth = parseInt(month || '0', 10);
 
-  const monthName = format(new Date(numericYear, numericMonth), 'MMMM', { locale: ptBR });
+  // Obtendo o nome do mês a partir do índice (0-11)
+  const monthName = useMemo(() => {
+    if (isNaN(numericYear) || isNaN(numericMonth) || numericMonth < 0 || numericMonth > 11) {
+      return '';
+    }
+    return format(new Date(numericYear, numericMonth, 1), 'MMMM', { locale: ptBR });
+  }, [numericYear, numericMonth]);
+
   const expenseCategories = categories.filter(c => c.type === 'expense');
 
   const monthlyData = useMemo(() => {
+    // Verificação para garantir que os dados são válidos
+    if (isNaN(numericYear) || isNaN(numericMonth)) {
+      return { expensesByCategory: {}, totalIncome: 0, totalExpense: 0, balance: 0 };
+    }
+
     const relevantTransactions = transactions.filter(t => {
       const date = new Date(t.date);
       return date.getFullYear() === numericYear && date.getMonth() === numericMonth;
@@ -83,6 +96,19 @@ export default function MonthDetail() {
   }, 0);
   const totalActual = monthlyData.totalExpense;
   
+  // Adicionando uma verificação para o caso de ano/mês inválido
+  if (!monthName) {
+    return (
+        <div>
+            <Button variant="ghost" asChild className="mb-4">
+                <Link to="/reports"><ArrowLeft className="mr-2 h-4 w-4" /> Voltar para Relatórios</Link>
+            </Button>
+            <h1 className="text-3xl font-bold tracking-tight">Data Inválida</h1>
+            <p className="text-muted-foreground">O ano ou mês selecionado não é válido.</p>
+        </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div>
