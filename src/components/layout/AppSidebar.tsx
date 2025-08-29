@@ -5,7 +5,8 @@ import {
   Calendar, 
   Tags, 
   Settings, 
-  LogOut
+  LogOut,
+  BarChart // Importe um novo ícone
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
@@ -25,6 +26,7 @@ import { cn } from '@/lib/utils';
 const mainNavigation = [
   { title: 'Home', url: '/home', icon: House },
   { title: 'Transações', url: '/transactions', icon: List },
+  { title: 'Relatórios', url: '/reports', icon: BarChart }, // Adicione o link aqui
   { title: 'Caixinha', url: '/savings', icon: PiggyBank },
 ];
 
