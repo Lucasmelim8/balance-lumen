@@ -30,6 +30,8 @@ export interface SpecialDate {
   name: string;
   date: string;
   description?: string;
+  isRecurring?: boolean;
+  isCompleted?: boolean;
 }
 
 export interface SavingsGoal {

@@ -15,6 +15,16 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -41,6 +51,8 @@ export default function Categories() {
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState<any>(null);
   const [formData, setFormData] = useState({
     name: '',
     type: 'expense' as 'income' | 'expense',
@@ -92,12 +104,21 @@ export default function Categories() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (categoryId: string) => {
-    removeCategory(categoryId);
-    toast({
-      title: "Categoria removida",
-      description: "A categoria foi removida com sucesso",
-    });
+  const handleDelete = (category: any) => {
+    setCategoryToDelete(category);
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (categoryToDelete) {
+      removeCategory(categoryToDelete.id);
+      toast({
+        title: "Categoria removida",
+        description: "A categoria foi removida com sucesso",
+      });
+      setIsDeleteConfirmOpen(false);
+      setCategoryToDelete(null);
+    }
   };
 
   const incomeCategories = categories.filter(c => c.type === 'income');
@@ -231,7 +252,7 @@ export default function Categories() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleDelete(category.id)}
+                      onClick={() => handleDelete(category)}
                       className="text-destructive hover:text-destructive"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -287,7 +308,7 @@ export default function Categories() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleDelete(category.id)}
+                      onClick={() => handleDelete(category)}
                       className="text-destructive hover:text-destructive"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -304,6 +325,25 @@ export default function Categories() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Modal de Confirmação de Exclusão */}
+      <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <AlertDialogContent className="sm:max-w-[500px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você tem certeza que deseja excluir a categoria "{categoryToDelete?.name}"? 
+              Esta ação não pode ser desfeita e pode afetar transações existentes.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

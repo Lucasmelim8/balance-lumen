@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Plus, Edit, Trash2, Calendar as CalendarIcon } from 'lucide-react';
+import { Plus, Edit, Trash2, Calendar as CalendarIcon, CheckCircle, Circle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -27,6 +28,8 @@ export default function SpecialDates() {
     name: '',
     date: '',
     description: '',
+    isRecurring: false,
+    isCompleted: false,
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -61,6 +64,8 @@ export default function SpecialDates() {
       name: '',
       date: '',
       description: '',
+      isRecurring: false,
+      isCompleted: false,
     });
   };
 
@@ -70,6 +75,8 @@ export default function SpecialDates() {
       name: specialDate.name,
       date: specialDate.date,
       description: specialDate.description || '',
+      isRecurring: specialDate.isRecurring || false,
+      isCompleted: specialDate.isCompleted || false,
     });
     setIsDialogOpen(true);
   };
@@ -92,6 +99,14 @@ export default function SpecialDates() {
     const timeDiff = date.getTime() - today.getTime();
     const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
     return daysDiff >= 0 && daysDiff <= 30;
+  };
+
+  const toggleCompleted = (specialDate: any) => {
+    updateSpecialDate(specialDate.id, { isCompleted: !specialDate.isCompleted });
+    toast({
+      title: specialDate.isCompleted ? "Marcado como pendente" : "Marcado como concluído",
+      description: `"${specialDate.name}" foi atualizado`,
+    });
   };
 
   const sortedDates = [...specialDates].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -158,6 +173,30 @@ export default function SpecialDates() {
                 />
               </div>
 
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="recurring"
+                    checked={formData.isRecurring}
+                    onCheckedChange={(checked) => setFormData({ ...formData, isRecurring: !!checked })}
+                  />
+                  <Label htmlFor="recurring" className="text-sm font-medium">
+                    Evento recorrente (repete todo ano)
+                  </Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="completed"
+                    checked={formData.isCompleted}
+                    onCheckedChange={(checked) => setFormData({ ...formData, isCompleted: !!checked })}
+                  />
+                  <Label htmlFor="completed" className="text-sm font-medium">
+                    Marcar como concluído
+                  </Label>
+                </div>
+              </div>
+
               <DialogFooter>
                 <Button type="submit" className="bg-gradient-primary">
                   {editingDate ? 'Salvar Alterações' : 'Criar Data Especial'}
@@ -175,7 +214,7 @@ export default function SpecialDates() {
               key={specialDate.id} 
               className={`bg-gradient-card shadow-medium transition-all hover:shadow-large ${
                 isUpcoming(specialDate.date) ? 'ring-2 ring-primary/50' : ''
-              }`}
+              } ${specialDate.isCompleted ? 'opacity-75' : ''}`}
             >
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
@@ -183,13 +222,27 @@ export default function SpecialDates() {
                     <CalendarIcon className={`h-5 w-5 ${
                       isUpcoming(specialDate.date) ? 'text-primary' : 'text-muted-foreground'
                     }`} />
-                    <CardTitle className="text-lg">{specialDate.name}</CardTitle>
+                <CardTitle className={`text-lg ${specialDate.isCompleted ? 'line-through text-muted-foreground' : ''}`}>
+                  {specialDate.name}
+                </CardTitle>
                   </div>
-                  {isUpcoming(specialDate.date) && (
-                    <div className="bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full">
-                      Próximo
-                    </div>
-                  )}
+                  <div className="flex gap-1">
+                    {specialDate.isRecurring && (
+                      <div className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
+                        Anual
+                      </div>
+                    )}
+                    {isUpcoming(specialDate.date) && !specialDate.isCompleted && (
+                      <div className="bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full">
+                        Próximo
+                      </div>
+                    )}
+                    {specialDate.isCompleted && (
+                      <div className="bg-green-500 text-white text-xs px-2 py-1 rounded-full">
+                        Concluído
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <CardDescription className="text-lg font-medium">
                   {formatDate(specialDate.date)}
@@ -207,11 +260,22 @@ export default function SpecialDates() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleEdit(specialDate)}
-                    className="flex-1"
+                    onClick={() => toggleCompleted(specialDate)}
+                    className={`flex-1 ${specialDate.isCompleted ? 'bg-green-50 text-green-700 border-green-200' : ''}`}
                   >
-                    <Edit className="mr-2 h-4 w-4" />
-                    Editar
+                    {specialDate.isCompleted ? (
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                    ) : (
+                      <Circle className="mr-2 h-4 w-4" />
+                    )}
+                    {specialDate.isCompleted ? 'Concluído' : 'Pendente'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleEdit(specialDate)}
+                  >
+                    <Edit className="h-4 w-4" />
                   </Button>
                   <Button
                     variant="outline"
