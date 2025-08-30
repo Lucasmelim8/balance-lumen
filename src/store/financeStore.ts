@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuthStore } from './authStore';
 
+// Database types mapping to frontend types
 export interface Account {
   id: string;
   name: string;
@@ -44,24 +47,21 @@ export interface SavingsGoal {
   targetDate?: string | null;
 }
 
-// Metas Mensais por semana
 export interface WeeklyGoal {
-  id: string; // ex: "2024-08-cat1"
+  id: string;
   year: number;
-  month: number; // 0-11
+  month: number;
   categoryId: string;
   weeklyAmounts: (number | undefined)[];
   monthlyAmount?: number;
 }
 
-// Anotações Mensais
 export interface MonthlyNote {
-    id: string; // ex: "2024-08"
-    year: number;
-    month: number;
-    content: string;
+  id: string;
+  year: number;
+  month: number;
+  content: string;
 }
-
 
 interface FinanceState {
   accounts: Account[];
@@ -69,40 +69,44 @@ interface FinanceState {
   categories: Category[];
   specialDates: SpecialDate[];
   savingsGoals: SavingsGoal[];
-  weeklyGoals: WeeklyGoal[]; 
+  weeklyGoals: WeeklyGoal[];
   monthlyNotes: MonthlyNote[];
+  isLoading: boolean;
 
+  // Data loading
+  loadUserData: () => Promise<void>;
+  
   // Account methods
-  addAccount: (account: Omit<Account, 'id'>) => void;
-  updateAccount: (id: string, account: Partial<Account>) => void;
-  removeAccount: (id: string) => void;
+  addAccount: (account: Omit<Account, 'id'>) => Promise<void>;
+  updateAccount: (id: string, account: Partial<Account>) => Promise<void>;
+  removeAccount: (id: string) => Promise<void>;
   
   // Transaction methods
-  addTransaction: (transaction: Omit<Transaction, 'id'>) => void;
-  updateTransaction: (id: string, transaction: Partial<Transaction>) => void;
-  removeTransaction: (id: string) => void;
+  addTransaction: (transaction: Omit<Transaction, 'id'>) => Promise<void>;
+  updateTransaction: (id: string, transaction: Partial<Transaction>) => Promise<void>;
+  removeTransaction: (id: string) => Promise<void>;
   
   // Category methods
-  addCategory: (category: Omit<Category, 'id'>) => void;
-  updateCategory: (id: string, category: Partial<Category>) => void;
-  removeCategory: (id: string) => void;
+  addCategory: (category: Omit<Category, 'id'>) => Promise<void>;
+  updateCategory: (id: string, category: Partial<Category>) => Promise<void>;
+  removeCategory: (id: string) => Promise<void>;
   
   // Special dates methods
-  addSpecialDate: (date: Omit<SpecialDate, 'id'>) => void;
-  updateSpecialDate: (id: string, date: Partial<SpecialDate>) => void;
-  removeSpecialDate: (id: string) => void;
+  addSpecialDate: (date: Omit<SpecialDate, 'id'>) => Promise<void>;
+  updateSpecialDate: (id: string, date: Partial<SpecialDate>) => Promise<void>;
+  removeSpecialDate: (id: string) => Promise<void>;
   
   // Savings goals methods
-  addSavingsGoal: (goal: Omit<SavingsGoal, 'id'>) => void;
-  updateSavingsGoal: (id: string, goal: Partial<SavingsGoal>) => void;
-  removeSavingsGoal: (id: string) => void;
-  addToSavingsGoal: (id: string, amount: number) => void;
+  addSavingsGoal: (goal: Omit<SavingsGoal, 'id'>) => Promise<void>;
+  updateSavingsGoal: (id: string, goal: Partial<SavingsGoal>) => Promise<void>;
+  removeSavingsGoal: (id: string) => Promise<void>;
+  addToSavingsGoal: (id: string, amount: number) => Promise<void>;
 
-  // Métodos para Metas Semanais
-  setWeeklyGoal: (goal: Omit<WeeklyGoal, 'id'>) => void;
+  // Weekly goals methods
+  setWeeklyGoal: (goal: Omit<WeeklyGoal, 'id'>) => Promise<void>;
 
-  // Métodos para Anotações Mensais
-  setMonthlyNote: (note: Omit<MonthlyNote, 'id'>) => void;
+  // Monthly notes methods
+  setMonthlyNote: (note: Omit<MonthlyNote, 'id'>) => Promise<void>;
   
   // Getters
   getTotalBalance: () => number;
@@ -118,150 +122,562 @@ const initialCategories: Category[] = [
   { id: '5', name: 'Freelance', color: '#10b981', type: 'income' },
 ];
 
-const initialAccounts: Account[] = [
-  { id: '1', name: 'Conta Corrente', balance: 2500, type: 'checking' },
-  { id: '2', name: 'Poupança', balance: 8000, type: 'savings' },
-];
-
-
 export const useFinanceStore = create<FinanceState>()(
   persist(
     (set, get) => ({
-      accounts: initialAccounts,
+      accounts: [],
       transactions: [],
-      categories: initialCategories,
+      categories: [],
       specialDates: [],
       savingsGoals: [],
       weeklyGoals: [],
       monthlyNotes: [],
+      isLoading: false,
+
+      loadUserData: async () => {
+        const { user } = useAuthStore.getState();
+        if (!user) return;
+
+        set({ isLoading: true });
+
+        try {
+          // Load all user data in parallel
+          const [
+            accountsResult,
+            categoriesResult,
+            transactionsResult,
+            specialDatesResult,
+            savingsGoalsResult,
+            weeklyGoalsResult,
+            monthlyNotesResult
+          ] = await Promise.all([
+            supabase.from('accounts').select('*').eq('user_id', user.id),
+            supabase.from('categories').select('*').eq('user_id', user.id),
+            supabase.from('transactions').select('*').eq('user_id', user.id),
+            supabase.from('special_dates').select('*').eq('user_id', user.id),
+            supabase.from('savings_goals').select('*').eq('user_id', user.id),
+            supabase.from('weekly_goals').select('*').eq('user_id', user.id),
+            supabase.from('monthly_notes').select('*').eq('user_id', user.id)
+          ]);
+
+          // Map database results to frontend types
+          const accounts = accountsResult.data?.map(acc => ({
+            id: acc.id,
+            name: acc.name,
+            balance: Number(acc.balance),
+            type: acc.type as 'checking' | 'savings' | 'credit'
+          })) || [];
+
+          const categories = categoriesResult.data?.map(cat => ({
+            id: cat.id,
+            name: cat.name,
+            color: cat.color,
+            type: cat.type as 'income' | 'expense'
+          })) || [];
+
+          // If no categories exist, create default ones
+          if (categories.length === 0) {
+            for (const category of initialCategories) {
+              await supabase.from('categories').insert({
+                user_id: user.id,
+                name: category.name,
+                color: category.color,
+                type: category.type
+              });
+            }
+            // Reload categories
+            const newCategoriesResult = await supabase.from('categories').select('*').eq('user_id', user.id);
+            categories.push(...(newCategoriesResult.data?.map(cat => ({
+              id: cat.id,
+              name: cat.name,
+              color: cat.color,
+              type: cat.type as 'income' | 'expense'
+            })) || []));
+          }
+
+          const transactions = transactionsResult.data?.map(tx => ({
+            id: tx.id,
+            description: tx.description,
+            amount: Number(tx.amount),
+            date: tx.date,
+            categoryId: tx.category_id,
+            accountId: tx.account_id,
+            type: tx.type as 'income' | 'expense',
+            paymentType: tx.payment_type as 'single' | 'monthly' | 'recurring' | undefined
+          })) || [];
+
+          const specialDates = specialDatesResult.data?.map(sd => ({
+            id: sd.id,
+            name: sd.name,
+            date: sd.date,
+            description: sd.description || undefined,
+            isRecurring: sd.is_recurring,
+            isCompleted: sd.is_completed
+          })) || [];
+
+          const savingsGoals = savingsGoalsResult.data?.map(sg => ({
+            id: sg.id,
+            name: sg.name,
+            targetAmount: Number(sg.target_amount),
+            currentAmount: Number(sg.current_amount),
+            createdAt: sg.created_at,
+            targetDate: sg.target_date || null
+          })) || [];
+
+          const weeklyGoals = weeklyGoalsResult.data?.map(wg => ({
+            id: wg.id,
+            year: wg.year,
+            month: wg.month,
+            categoryId: wg.category_id,
+            weeklyAmounts: wg.weekly_amounts || [],
+            monthlyAmount: wg.monthly_amount ? Number(wg.monthly_amount) : undefined
+          })) || [];
+
+          const monthlyNotes = monthlyNotesResult.data?.map(mn => ({
+            id: mn.id,
+            year: mn.year,
+            month: mn.month,
+            content: mn.content
+          })) || [];
+
+          set({
+            accounts,
+            categories,
+            transactions,
+            specialDates,
+            savingsGoals,
+            weeklyGoals,
+            monthlyNotes,
+            isLoading: false
+          });
+
+        } catch (error) {
+          console.error('Error loading user data:', error);
+          set({ isLoading: false });
+        }
+      },
       
       // Account methods
-      addAccount: (account) => {
-        const newAccount = { ...account, id: Date.now().toString() };
-        set((state) => ({ accounts: [...state.accounts, newAccount] }));
+      addAccount: async (account) => {
+        const { user } = useAuthStore.getState();
+        if (!user) return;
+
+        const { data, error } = await supabase
+          .from('accounts')
+          .insert({
+            user_id: user.id,
+            name: account.name,
+            balance: account.balance,
+            type: account.type
+          })
+          .select()
+          .single();
+
+        if (!error && data) {
+          const newAccount = {
+            id: data.id,
+            name: data.name,
+            balance: Number(data.balance),
+            type: data.type as 'checking' | 'savings' | 'credit'
+          };
+          set(state => ({ accounts: [...state.accounts, newAccount] }));
+        }
       },
-      updateAccount: (id, account) => {
-        set((state) => ({
-          accounts: state.accounts.map((acc) =>
-            acc.id === id ? { ...acc, ...account } : acc
-          ),
-        }));
+
+      updateAccount: async (id, account) => {
+        const { error } = await supabase
+          .from('accounts')
+          .update({
+            name: account.name,
+            balance: account.balance,
+            type: account.type
+          })
+          .eq('id', id);
+
+        if (!error) {
+          set(state => ({
+            accounts: state.accounts.map(acc =>
+              acc.id === id ? { ...acc, ...account } : acc
+            )
+          }));
+        }
       },
-      removeAccount: (id) => {
-        set((state) => ({
-          accounts: state.accounts.filter((acc) => acc.id !== id),
-        }));
+
+      removeAccount: async (id) => {
+        const { error } = await supabase
+          .from('accounts')
+          .delete()
+          .eq('id', id);
+
+        if (!error) {
+          set(state => ({
+            accounts: state.accounts.filter(acc => acc.id !== id)
+          }));
+        }
       },
       
-      // Transaction methods  
-      addTransaction: (transaction) => {
-        const newTransaction = { ...transaction, id: Date.now().toString() };
-        set((state) => ({ transactions: [...state.transactions, newTransaction] }));
+      // Transaction methods
+      addTransaction: async (transaction) => {
+        const { user } = useAuthStore.getState();
+        if (!user) return;
+
+        const { data, error } = await supabase
+          .from('transactions')
+          .insert({
+            user_id: user.id,
+            description: transaction.description,
+            amount: transaction.amount,
+            date: transaction.date,
+            category_id: transaction.categoryId,
+            account_id: transaction.accountId,
+            type: transaction.type,
+            payment_type: transaction.paymentType
+          })
+          .select()
+          .single();
+
+        if (!error && data) {
+          const newTransaction = {
+            id: data.id,
+            description: data.description,
+            amount: Number(data.amount),
+            date: data.date,
+            categoryId: data.category_id,
+            accountId: data.account_id,
+            type: data.type as 'income' | 'expense',
+            paymentType: data.payment_type as 'single' | 'monthly' | 'recurring' | undefined
+          };
+          set(state => ({ transactions: [...state.transactions, newTransaction] }));
+        }
       },
-      updateTransaction: (id, transaction) => {
-        set((state) => ({
-          transactions: state.transactions.map((tx) =>
-            tx.id === id ? { ...tx, ...transaction } : tx
-          ),
-        }));
+
+      updateTransaction: async (id, transaction) => {
+        const updateData: any = {};
+        if (transaction.description !== undefined) updateData.description = transaction.description;
+        if (transaction.amount !== undefined) updateData.amount = transaction.amount;
+        if (transaction.date !== undefined) updateData.date = transaction.date;
+        if (transaction.categoryId !== undefined) updateData.category_id = transaction.categoryId;
+        if (transaction.accountId !== undefined) updateData.account_id = transaction.accountId;
+        if (transaction.type !== undefined) updateData.type = transaction.type;
+        if (transaction.paymentType !== undefined) updateData.payment_type = transaction.paymentType;
+
+        const { error } = await supabase
+          .from('transactions')
+          .update(updateData)
+          .eq('id', id);
+
+        if (!error) {
+          set(state => ({
+            transactions: state.transactions.map(tx =>
+              tx.id === id ? { ...tx, ...transaction } : tx
+            )
+          }));
+        }
       },
-      removeTransaction: (id) => {
-        set((state) => ({
-          transactions: state.transactions.filter((tx) => tx.id !== id),
-        }));
+
+      removeTransaction: async (id) => {
+        const { error } = await supabase
+          .from('transactions')
+          .delete()
+          .eq('id', id);
+
+        if (!error) {
+          set(state => ({
+            transactions: state.transactions.filter(tx => tx.id !== id)
+          }));
+        }
       },
       
       // Category methods
-      addCategory: (category) => {
-        const newCategory = { ...category, id: Date.now().toString() };
-        set((state) => ({ categories: [...state.categories, newCategory] }));
+      addCategory: async (category) => {
+        const { user } = useAuthStore.getState();
+        if (!user) return;
+
+        const { data, error } = await supabase
+          .from('categories')
+          .insert({
+            user_id: user.id,
+            name: category.name,
+            color: category.color,
+            type: category.type
+          })
+          .select()
+          .single();
+
+        if (!error && data) {
+          const newCategory = {
+            id: data.id,
+            name: data.name,
+            color: data.color,
+            type: data.type as 'income' | 'expense'
+          };
+          set(state => ({ categories: [...state.categories, newCategory] }));
+        }
       },
-      updateCategory: (id, category) => {
-        set((state) => ({
-          categories: state.categories.map((cat) =>
-            cat.id === id ? { ...cat, ...category } : cat
-          ),
-        }));
+
+      updateCategory: async (id, category) => {
+        const { error } = await supabase
+          .from('categories')
+          .update({
+            name: category.name,
+            color: category.color,
+            type: category.type
+          })
+          .eq('id', id);
+
+        if (!error) {
+          set(state => ({
+            categories: state.categories.map(cat =>
+              cat.id === id ? { ...cat, ...category } : cat
+            )
+          }));
+        }
       },
-      removeCategory: (id) => {
-        set((state) => ({
-          categories: state.categories.filter((cat) => cat.id !== id),
-        }));
+
+      removeCategory: async (id) => {
+        const { error } = await supabase
+          .from('categories')
+          .delete()
+          .eq('id', id);
+
+        if (!error) {
+          set(state => ({
+            categories: state.categories.filter(cat => cat.id !== id)
+          }));
+        }
       },
       
       // Special dates methods
-      addSpecialDate: (date) => {
-        const newDate = { ...date, id: Date.now().toString() };
-        set((state) => ({ specialDates: [...state.specialDates, newDate] }));
+      addSpecialDate: async (date) => {
+        const { user } = useAuthStore.getState();
+        if (!user) return;
+
+        const { data, error } = await supabase
+          .from('special_dates')
+          .insert({
+            user_id: user.id,
+            name: date.name,
+            date: date.date,
+            description: date.description,
+            is_recurring: date.isRecurring || false,
+            is_completed: date.isCompleted || false
+          })
+          .select()
+          .single();
+
+        if (!error && data) {
+          const newDate = {
+            id: data.id,
+            name: data.name,
+            date: data.date,
+            description: data.description || undefined,
+            isRecurring: data.is_recurring,
+            isCompleted: data.is_completed
+          };
+          set(state => ({ specialDates: [...state.specialDates, newDate] }));
+        }
       },
-      updateSpecialDate: (id, date) => {
-        set((state) => ({
-          specialDates: state.specialDates.map((sd) =>
-            sd.id === id ? { ...sd, ...date } : sd
-          ),
-        }));
+
+      updateSpecialDate: async (id, date) => {
+        const updateData: any = {};
+        if (date.name !== undefined) updateData.name = date.name;
+        if (date.date !== undefined) updateData.date = date.date;
+        if (date.description !== undefined) updateData.description = date.description;
+        if (date.isRecurring !== undefined) updateData.is_recurring = date.isRecurring;
+        if (date.isCompleted !== undefined) updateData.is_completed = date.isCompleted;
+
+        const { error } = await supabase
+          .from('special_dates')
+          .update(updateData)
+          .eq('id', id);
+
+        if (!error) {
+          set(state => ({
+            specialDates: state.specialDates.map(sd =>
+              sd.id === id ? { ...sd, ...date } : sd
+            )
+          }));
+        }
       },
-      removeSpecialDate: (id) => {
-        set((state) => ({
-          specialDates: state.specialDates.filter((sd) => sd.id !== id),
-        }));
+
+      removeSpecialDate: async (id) => {
+        const { error } = await supabase
+          .from('special_dates')
+          .delete()
+          .eq('id', id);
+
+        if (!error) {
+          set(state => ({
+            specialDates: state.specialDates.filter(sd => sd.id !== id)
+          }));
+        }
       },
       
       // Savings goals methods
-      addSavingsGoal: (goal) => {
-        const newGoal = { 
-          ...goal, 
-          id: Date.now().toString(),
-          createdAt: new Date().toISOString()
-        };
-        set((state) => ({ savingsGoals: [...state.savingsGoals, newGoal] }));
-      },
-      updateSavingsGoal: (id, goal) => {
-        set((state) => ({
-          savingsGoals: state.savingsGoals.map((sg) =>
-            sg.id === id ? { ...sg, ...goal } : sg
-          ),
-        }));
-      },
-      removeSavingsGoal: (id) => {
-        set((state) => ({
-          savingsGoals: state.savingsGoals.filter((sg) => sg.id !== id),
-        }));
-      },
-      addToSavingsGoal: (id, amount) => {
-        set((state) => ({
-          savingsGoals: state.savingsGoals.map((sg) =>
-            sg.id === id 
-              ? { ...sg, currentAmount: Math.min(sg.currentAmount + amount, sg.targetAmount) }
-              : sg
-          ),
-        }));
+      addSavingsGoal: async (goal) => {
+        const { user } = useAuthStore.getState();
+        if (!user) return;
+
+        const { data, error } = await supabase
+          .from('savings_goals')
+          .insert({
+            user_id: user.id,
+            name: goal.name,
+            target_amount: goal.targetAmount,
+            current_amount: goal.currentAmount || 0,
+            target_date: goal.targetDate
+          })
+          .select()
+          .single();
+
+        if (!error && data) {
+          const newGoal = {
+            id: data.id,
+            name: data.name,
+            targetAmount: Number(data.target_amount),
+            currentAmount: Number(data.current_amount),
+            createdAt: data.created_at,
+            targetDate: data.target_date || null
+          };
+          set(state => ({ savingsGoals: [...state.savingsGoals, newGoal] }));
+        }
       },
 
-      setWeeklyGoal: (goal) => {
-        const id = `${goal.year}-${goal.month}-${goal.categoryId}`;
-        set((state) => {
-            const existingGoal = state.weeklyGoals.find(g => g.id === id);
-            if (existingGoal) {
-                return {
-                    weeklyGoals: state.weeklyGoals.map(g => g.id === id ? { ...g, ...goal, id } : g)
-                }
-            }
-            return { weeklyGoals: [...state.weeklyGoals, { ...goal, id }] }
-        });
+      updateSavingsGoal: async (id, goal) => {
+        const updateData: any = {};
+        if (goal.name !== undefined) updateData.name = goal.name;
+        if (goal.targetAmount !== undefined) updateData.target_amount = goal.targetAmount;
+        if (goal.currentAmount !== undefined) updateData.current_amount = goal.currentAmount;
+        if (goal.targetDate !== undefined) updateData.target_date = goal.targetDate;
+
+        const { error } = await supabase
+          .from('savings_goals')
+          .update(updateData)
+          .eq('id', id);
+
+        if (!error) {
+          set(state => ({
+            savingsGoals: state.savingsGoals.map(sg =>
+              sg.id === id ? { ...sg, ...goal } : sg
+            )
+          }));
+        }
       },
 
-      setMonthlyNote: (note) => {
-        const id = `${note.year}-${note.month}`;
-        set((state) => {
-            const existingNote = state.monthlyNotes.find(n => n.id === id);
-            if (existingNote) {
-                return {
-                    monthlyNotes: state.monthlyNotes.map(n => n.id === id ? { ...n, ...note, id } : n)
-                }
+      removeSavingsGoal: async (id) => {
+        const { error } = await supabase
+          .from('savings_goals')
+          .delete()
+          .eq('id', id);
+
+        if (!error) {
+          set(state => ({
+            savingsGoals: state.savingsGoals.filter(sg => sg.id !== id)
+          }));
+        }
+      },
+
+      addToSavingsGoal: async (id, amount) => {
+        const { savingsGoals } = get();
+        const goal = savingsGoals.find(sg => sg.id === id);
+        if (!goal) return;
+
+        const newAmount = Math.min(goal.currentAmount + amount, goal.targetAmount);
+        
+        const { error } = await supabase
+          .from('savings_goals')
+          .update({ current_amount: newAmount })
+          .eq('id', id);
+
+        if (!error) {
+          set(state => ({
+            savingsGoals: state.savingsGoals.map(sg =>
+              sg.id === id ? { ...sg, currentAmount: newAmount } : sg
+            )
+          }));
+        }
+      },
+
+      setWeeklyGoal: async (goal) => {
+        const { user } = useAuthStore.getState();
+        if (!user) return;
+
+        const { data, error } = await supabase
+          .from('weekly_goals')
+          .upsert({
+            user_id: user.id,
+            year: goal.year,
+            month: goal.month,
+            category_id: goal.categoryId,
+            weekly_amounts: goal.weeklyAmounts,
+            monthly_amount: goal.monthlyAmount
+          })
+          .select()
+          .single();
+
+        if (!error && data) {
+          const newGoal = {
+            id: data.id,
+            year: data.year,
+            month: data.month,
+            categoryId: data.category_id,
+            weeklyAmounts: data.weekly_amounts || [],
+            monthlyAmount: data.monthly_amount ? Number(data.monthly_amount) : undefined
+          };
+          
+          set(state => {
+            const existingIndex = state.weeklyGoals.findIndex(
+              wg => wg.year === goal.year && wg.month === goal.month && wg.categoryId === goal.categoryId
+            );
+            
+            if (existingIndex >= 0) {
+              const updated = [...state.weeklyGoals];
+              updated[existingIndex] = newGoal;
+              return { weeklyGoals: updated };
             }
-            return { monthlyNotes: [...state.monthlyNotes, { ...note, id }] };
-        });
+            
+            return { weeklyGoals: [...state.weeklyGoals, newGoal] };
+          });
+        }
+      },
+
+      setMonthlyNote: async (note) => {
+        const { user } = useAuthStore.getState();
+        if (!user) return;
+
+        const { data, error } = await supabase
+          .from('monthly_notes')
+          .upsert({
+            user_id: user.id,
+            year: note.year,
+            month: note.month,
+            content: note.content
+          })
+          .select()
+          .single();
+
+        if (!error && data) {
+          const newNote = {
+            id: data.id,
+            year: data.year,
+            month: data.month,
+            content: data.content
+          };
+          
+          set(state => {
+            const existingIndex = state.monthlyNotes.findIndex(
+              mn => mn.year === note.year && mn.month === note.month
+            );
+            
+            if (existingIndex >= 0) {
+              const updated = [...state.monthlyNotes];
+              updated[existingIndex] = newNote;
+              return { monthlyNotes: updated };
+            }
+            
+            return { monthlyNotes: [...state.monthlyNotes, newNote] };
+          });
+        }
       },
       
       // Getters
@@ -269,6 +685,7 @@ export const useFinanceStore = create<FinanceState>()(
         const { accounts } = get();
         return accounts.reduce((total, account) => total + account.balance, 0);
       },
+      
       getTotalIncome: (month, year) => {
         const { transactions } = get();
         const currentMonth = month ?? new Date().getMonth();
@@ -283,6 +700,7 @@ export const useFinanceStore = create<FinanceState>()(
           })
           .reduce((total, tx) => total + tx.amount, 0);
       },
+      
       getTotalExpenses: (month, year) => {
         const { transactions } = get();
         const currentMonth = month ?? new Date().getMonth();
@@ -300,7 +718,10 @@ export const useFinanceStore = create<FinanceState>()(
     }),
     {
       name: 'finance-storage',
+      partialize: (state) => ({
+        // Only persist non-database data for faster initial loads
+        isLoading: state.isLoading
+      }),
     }
   )
 );
-

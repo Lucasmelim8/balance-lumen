@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthGuard } from "./components/layout/AuthGuard";
 import { MainLayout } from "./components/layout/MainLayout";
+import { AuthProvider } from "./components/layout/AuthProvider";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Home from "./pages/Home";
@@ -14,7 +15,7 @@ import SpecialDates from "./pages/SpecialDates";
 import Savings from "./pages/Savings";
 import Settings from "./pages/Settings";
 import Reports from "./pages/Reports";
-import MonthDetail from "./pages/MonthDetail"; // NOVO: Importa o detalhe mensal
+import MonthDetail from "./pages/MonthDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,9 +23,10 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
+      <AuthProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
         <Routes>
           {/* Public routes */}
           <Route path="/login" element={<Login />} />
@@ -94,6 +96,7 @@ const App = () => (
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
+      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

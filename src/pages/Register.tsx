@@ -39,17 +39,17 @@ export default function Register() {
     setIsLoading(true);
 
     try {
-      const success = await register(name, email, password);
-      if (success) {
+      const { error } = await register(name, email, password);
+      if (error) {
         toast({
-          title: "Conta criada com sucesso!",
-          description: "Bem-vindo ao ExpenseTracker",
+          title: "Erro no cadastro",
+          description: error,
+          variant: "destructive",
         });
       } else {
         toast({
-          title: "Erro no registro",
-          description: "Verifique os dados e tente novamente",
-          variant: "destructive",
+          title: "Conta criada com sucesso!",
+          description: "Bem-vindo ao ExpenseTracker",
         });
       }
     } catch (error) {

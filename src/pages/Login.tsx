@@ -29,17 +29,17 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      const success = await login(email, password);
-      if (success) {
+      const { error } = await login(email, password);
+      if (error) {
         toast({
-          title: "Login realizado com sucesso!",
-          description: "Bem-vindo ao ExpenseTracker",
+          title: "Erro no login",
+          description: error,
+          variant: "destructive",
         });
       } else {
         toast({
-          title: "Erro no login",
-          description: "Email ou senha inválidos",
-          variant: "destructive",
+          title: "Login realizado com sucesso!",
+          description: "Bem-vindo ao ExpenseTracker",
         });
       }
     } catch (error) {
