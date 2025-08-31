@@ -347,11 +347,38 @@ export const useFinanceStore = create<FinanceState>()(
             type: data.type as 'income' | 'expense',
             paymentType: data.payment_type as 'single' | 'monthly' | 'recurring' | undefined
           };
-          set(state => ({ transactions: [...state.transactions, newTransaction] }));
+
+          // Update account balance  
+          const balanceChange = transaction.type === 'income' ? transaction.amount : -transaction.amount;
+          
+          // Get current account balance
+          const { accounts } = get();
+          const account = accounts.find(acc => acc.id === transaction.accountId);
+          if (account) {
+            const newBalance = account.balance + balanceChange;
+            await supabase
+              .from('accounts')
+              .update({ balance: newBalance })
+              .eq('id', transaction.accountId);
+          }
+
+          // Update local state
+          set(state => ({ 
+            transactions: [...state.transactions, newTransaction],
+            accounts: state.accounts.map(acc => 
+              acc.id === transaction.accountId 
+                ? { ...acc, balance: acc.balance + balanceChange }
+                : acc
+            )
+          }));
         }
       },
 
       updateTransaction: async (id, transaction) => {
+        const { transactions, accounts } = get();
+        const oldTransaction = transactions.find(t => t.id === id);
+        if (!oldTransaction) return;
+
         const updateData: any = {};
         if (transaction.description !== undefined) updateData.description = transaction.description;
         if (transaction.amount !== undefined) updateData.amount = transaction.amount;
@@ -367,23 +394,96 @@ export const useFinanceStore = create<FinanceState>()(
           .eq('id', id);
 
         if (!error) {
+          // Calculate balance changes
+          const oldBalanceChange = oldTransaction.type === 'income' ? -oldTransaction.amount : oldTransaction.amount;
+          const newAmount = transaction.amount ?? oldTransaction.amount;
+          const newType = transaction.type ?? oldTransaction.type;
+          const newBalanceChange = newType === 'income' ? newAmount : -newAmount;
+          const totalChange = oldBalanceChange + newBalanceChange;
+          
+          const oldAccountId = oldTransaction.accountId;
+          const newAccountId = transaction.accountId ?? oldTransaction.accountId;
+
+          // Update account balances
+          if (oldAccountId === newAccountId && totalChange !== 0) {
+            // Same account - just update the difference
+            const account = accounts.find(acc => acc.id === oldAccountId);
+            if (account) {
+              const newBalance = account.balance + totalChange;
+              await supabase
+                .from('accounts')
+                .update({ balance: newBalance })
+                .eq('id', oldAccountId);
+            }
+          } else if (oldAccountId !== newAccountId) {
+            // Different accounts - reverse old and apply new
+            const oldAccount = accounts.find(acc => acc.id === oldAccountId);
+            const newAccount = accounts.find(acc => acc.id === newAccountId);
+            
+            if (oldAccount && newAccount) {
+              await Promise.all([
+                supabase
+                  .from('accounts')
+                  .update({ balance: oldAccount.balance + oldBalanceChange })
+                  .eq('id', oldAccountId),
+                supabase
+                  .from('accounts')
+                  .update({ balance: newAccount.balance + newBalanceChange })
+                  .eq('id', newAccountId)
+              ]);
+            }
+          }
+
+          // Update local state
           set(state => ({
             transactions: state.transactions.map(tx =>
               tx.id === id ? { ...tx, ...transaction } : tx
-            )
+            ),
+            accounts: state.accounts.map(acc => {
+              if (acc.id === oldAccountId && acc.id === newAccountId) {
+                return { ...acc, balance: acc.balance + totalChange };
+              } else if (acc.id === oldAccountId) {
+                return { ...acc, balance: acc.balance + oldBalanceChange };
+              } else if (acc.id === newAccountId) {
+                return { ...acc, balance: acc.balance + newBalanceChange };
+              }
+              return acc;
+            })
           }));
         }
       },
 
       removeTransaction: async (id) => {
+        const { transactions, accounts } = get();
+        const transaction = transactions.find(t => t.id === id);
+        if (!transaction) return;
+
         const { error } = await supabase
           .from('transactions')
           .delete()
           .eq('id', id);
 
         if (!error) {
+          // Reverse the balance change
+          const balanceChange = transaction.type === 'income' ? -transaction.amount : transaction.amount;
+          const account = accounts.find(acc => acc.id === transaction.accountId);
+          
+          if (account) {
+            const newBalance = account.balance + balanceChange;
+            await supabase
+              .from('accounts')
+              .update({ balance: newBalance })
+              .eq('id', transaction.accountId);
+          }
+
+          // Update local state
           set(state => ({
-            transactions: state.transactions.filter(tx => tx.id !== id)
+            transactions: state.transactions.filter(tx => tx.id !== id),
+            accounts: state.accounts.map(acc =>
+              acc.id === transaction.accountId
+                ? { ...acc, balance: acc.balance + balanceChange }
+                : acc
+            )
           }));
         }
       },
