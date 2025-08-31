@@ -199,7 +199,7 @@ export const useFinanceStore = create<FinanceState>()(
             id: tx.id,
             description: tx.description,
             amount: Number(tx.amount),
-            date: tx.date,
+            date: new Date(tx.date).toISOString().split('T')[0], // Convert timestamp to date string
             categoryId: tx.category_id,
             accountId: tx.account_id,
             type: tx.type as 'income' | 'expense',
@@ -341,7 +341,7 @@ export const useFinanceStore = create<FinanceState>()(
             id: data.id,
             description: data.description,
             amount: Number(data.amount),
-            date: data.date,
+            date: new Date(data.date).toISOString().split('T')[0], // Convert timestamp to date string
             categoryId: data.category_id,
             accountId: data.account_id,
             type: data.type as 'income' | 'expense',

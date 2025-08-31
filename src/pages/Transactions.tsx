@@ -30,58 +30,8 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
-
-// --- Simulação do Store (Zustand) ---
-const mockAccounts = [
-  { id: 'acc1', name: 'Conta Corrente', type: 'corrente', balance: 5420.50 },
-  { id: 'acc2', name: 'Cartão de Crédito', type: 'credito', balance: -850.75 },
-  { id: 'acc3', name: 'Poupança', type: 'poupanca', balance: 12345.00 },
-];
-
-const mockCategories = [
-  { id: 'cat1', name: 'Salário' },
-  { id: 'cat2', name: 'Alimentação' },
-  { id: 'cat3', name: 'Transporte' },
-  { id: 'cat4', name: 'Lazer' },
-  { id: 'cat5', name: 'Assinaturas' },
-];
-
-const mockTransactions = [
-    // Preenchendo com mais dados para testar a paginação
-    { id: 't1', description: 'Salário Mensal', amount: 7500, date: '2025-08-05', type: 'income', categoryId: 'cat1', accountId: 'acc1', paymentType: 'single' },
-    { id: 't2', description: 'Supermercado', amount: 450.60, date: '2025-08-10', type: 'expense', categoryId: 'cat2', accountId: 'acc2', paymentType: 'monthly' },
-    { id: 't3', description: 'Uber para o trabalho', amount: 25.50, date: '2025-08-11', type: 'expense', categoryId: 'cat3', accountId: 'acc2', paymentType: 'single' },
-    { id: 't4', description: 'Cinema', amount: 60.00, date: '2025-08-12', type: 'expense', categoryId: 'cat4', accountId: 'acc1', paymentType: 'single' },
-    { id: 't5', description: 'Netflix', amount: 39.90, date: '2025-07-15', type: 'expense', categoryId: 'cat5', accountId: 'acc2', paymentType: 'recurring' },
-    { id: 't6', description: 'Salário Mensal', amount: 7500, date: '2025-07-05', type: 'income', categoryId: 'cat1', accountId: 'acc1', paymentType: 'single' },
-    { id: 't7', description: 'Almoço', amount: 35.00, date: '2025-08-15', type: 'expense', categoryId: 'cat2', accountId: 'acc1', paymentType: 'single' },
-    { id: 't8', description: 'Spotify', amount: 21.90, date: '2025-08-01', type: 'expense', categoryId: 'cat5', accountId: 'acc2', paymentType: 'recurring' },
-    { id: 't9', description: 'Gasolina', amount: 150.00, date: '2025-08-08', type: 'expense', categoryId: 'cat3', accountId: 'acc1', paymentType: 'single' },
-    { id: 't10', description: 'Freelance', amount: 1200, date: '2025-08-20', type: 'income', categoryId: 'cat1', accountId: 'acc1', paymentType: 'single' },
-    { id: 't11', description: 'Academia', amount: 99.90, date: '2025-08-05', type: 'expense', categoryId: 'cat4', accountId: 'acc2', paymentType: 'monthly' },
-    { id: 't12', description: 'Farmácia', amount: 75.25, date: '2025-08-22', type: 'expense', categoryId: 'cat2', accountId: 'acc1', paymentType: 'single' },
-];
-
-
-const useFinanceStore = () => {
-  const [transactions, setTransactions] = useState(mockTransactions);
-  const [accounts] = useState(mockAccounts);
-  const [categories] = useState(mockCategories);
-
-  const addTransaction = (transaction) => {
-    setTransactions(prev => [...prev, transaction].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-  };
-
-  const updateTransaction = (updatedTransaction) => {
-    setTransactions(prev => prev.map(t => t.id === updatedTransaction.id ? updatedTransaction : t));
-  };
-
-  const removeTransaction = (id) => {
-    setTransactions(prev => prev.filter(t => t.id !== id));
-  };
-
-  return { transactions, categories, accounts, addTransaction, updateTransaction, removeTransaction };
-};
+import { useFinanceStore } from '@/store/financeStore';
+import { toast } from '@/components/ui/use-toast';
 
 // Interface para o formulário da transação
 interface TransactionFormData {
@@ -102,7 +52,8 @@ export default function Transactions() {
     accounts,
     addTransaction,
     updateTransaction,
-    removeTransaction
+    removeTransaction,
+    isLoading
   } = useFinanceStore();
 
   // Estados dos filtros
@@ -117,7 +68,7 @@ export default function Transactions() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [currentTransaction, setCurrentTransaction] = useState(null);
-  const [transactionFormData, setTransactionFormData] = useState({
+  const [transactionFormData, setTransactionFormData] = useState<TransactionFormData>({
     description: '',
     amount: 0,
     date: new Date().toISOString().split('T')[0],
@@ -215,11 +166,16 @@ export default function Transactions() {
     setIsModalOpen(true);
   };
 
-  const handleSaveChanges = () => {
+  const handleSaveChanges = async () => {
     if (!transactionFormData.description || transactionFormData.amount <= 0 || !transactionFormData.accountId || !transactionFormData.categoryId) {
-      console.error("Por favor, preencha todos os campos obrigatórios.");
+      toast({
+        title: "Erro",
+        description: "Por favor, preencha todos os campos obrigatórios.",
+        variant: "destructive",
+      });
       return;
     }
+    
     const { isMonthly, isRecurring, ...rest } = transactionFormData;
     let paymentType = 'single';
     if (transactionFormData.type === 'expense') {
@@ -227,14 +183,33 @@ export default function Transactions() {
         else if (isMonthly) paymentType = 'monthly';
     }
 
-    const transactionData = { ...rest, paymentType };
+    const transactionData = { 
+      ...rest, 
+      paymentType: paymentType as 'single' | 'monthly' | 'recurring' | undefined
+    };
 
-    if (currentTransaction) {
-      updateTransaction({ ...currentTransaction, ...transactionData });
-    } else {
-      addTransaction({ id: Date.now().toString(), ...transactionData });
+    try {
+      if (currentTransaction) {
+        await updateTransaction(currentTransaction.id, transactionData);
+        toast({
+          title: "Sucesso",
+          description: "Transação atualizada com sucesso!",
+        });
+      } else {
+        await addTransaction(transactionData);
+        toast({
+          title: "Sucesso", 
+          description: "Transação adicionada com sucesso!",
+        });
+      }
+      setIsModalOpen(false);
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro ao salvar a transação.",
+        variant: "destructive",
+      });
     }
-    setIsModalOpen(false);
   };
 
   const handleOpenDeleteConfirm = (transaction) => {
@@ -242,8 +217,22 @@ export default function Transactions() {
     setIsDeleteConfirmOpen(true);
   };
 
-  const handleDeleteConfirm = () => {
-    if (currentTransaction) removeTransaction(currentTransaction.id);
+  const handleDeleteConfirm = async () => {
+    if (currentTransaction) {
+      try {
+        await removeTransaction(currentTransaction.id);
+        toast({
+          title: "Sucesso",
+          description: "Transação excluída com sucesso!",
+        });
+      } catch (error) {
+        toast({
+          title: "Erro",
+          description: "Ocorreu um erro ao excluir a transação.",
+          variant: "destructive",
+        });
+      }
+    }
     setIsDeleteConfirmOpen(false);
     setCurrentTransaction(null);
   };

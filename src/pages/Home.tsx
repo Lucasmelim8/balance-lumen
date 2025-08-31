@@ -37,6 +37,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useFinanceStore } from '@/store/financeStore';
+import { toast } from '@/components/ui/use-toast';
 
 // Mock de dados para o tipo de conta, caso não venha do store
 const accountTypes = [
@@ -132,8 +133,15 @@ export default function Home() {
     setIsDeleteConfirmOpen(true);
   };
 
-  const handleSaveAccount = () => {
-    if (!accountFormData.name || !accountFormData.type) return;
+  const handleSaveAccount = async () => {
+    if (!accountFormData.name || !accountFormData.type) {
+      toast({
+        title: "Erro",
+        description: "Por favor, preencha todos os campos obrigatórios.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const accountData = {
       name: accountFormData.name,
@@ -141,19 +149,45 @@ export default function Home() {
       balance: accountFormData.balance,
     };
 
-    if (currentAccount) {
-      // Atualizar conta existente
-      updateAccount(currentAccount.id, accountData);
-    } else {
-      // Adicionar nova conta
-      addAccount(accountData);
+    try {
+      if (currentAccount) {
+        await updateAccount(currentAccount.id, accountData);
+        toast({
+          title: "Sucesso",
+          description: "Conta atualizada com sucesso!",
+        });
+      } else {
+        await addAccount(accountData);
+        toast({
+          title: "Sucesso",
+          description: "Conta adicionada com sucesso!",
+        });
+      }
+      setIsModalOpen(false);
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro ao salvar a conta.",
+        variant: "destructive",
+      });
     }
-    setIsModalOpen(false);
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (currentAccount) {
-      removeAccount(currentAccount.id);
+      try {
+        await removeAccount(currentAccount.id);
+        toast({
+          title: "Sucesso",
+          description: "Conta excluída com sucesso!",
+        });
+      } catch (error) {
+        toast({
+          title: "Erro",
+          description: "Ocorreu um erro ao excluir a conta.",
+          variant: "destructive",
+        });
+      }
     }
     setIsDeleteConfirmOpen(false);
     setCurrentAccount(null);
