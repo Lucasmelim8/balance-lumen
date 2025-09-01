@@ -1,4 +1,4 @@
-import { Bell, LogOut, User, Settings } from 'lucide-react';
+import { Bell, LogOut, Settings } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -10,18 +10,21 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuthStore } from '@/store/authStore';
-import { SidebarTrigger } from '@/components/ui/sidebar';
-import { Clock } from './Clock'; // Importe o novo componente
+import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
+import { Clock } from './Clock'; 
 
 export function Navbar() {
   const { user, logout } = useAuthStore();
+  const { state, isMobile } = useSidebar();
+  const isCollapsed = state === 'collapsed';
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-card shadow-soft">
       <div className="flex h-16 items-center px-6">
-        {/* Left - Sidebar Toggle (Mobile) */}
+        {/* Left - Sidebar Toggle */}
         <div className="flex items-center gap-4">
-          <SidebarTrigger className="md:hidden" />
+          {/* Mostra o gatilho no mobile OU quando a sidebar está colapsada no desktop */}
+          {(isMobile || isCollapsed) && <SidebarTrigger />}
         </div>
 
         {/* Center - Clock */}
