@@ -8,7 +8,6 @@ import {
   LogOut,
   BarChart,
   ChevronRight,
-  Menu,
 } from 'lucide-react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -25,7 +24,6 @@ import {
   SidebarFooter,
   SidebarGroupLabel,
 } from '@/components/ui/sidebar';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
 
@@ -43,7 +41,7 @@ const secondaryNavigation = [
 ];
 
 export function AppSidebar() {
-  const { state, toggleSidebar } = useSidebar();
+  const { state } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
   const { logout } = useAuthStore();
@@ -86,16 +84,8 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon" className="bg-sidebar-background border-r border-sidebar-border flex flex-col">
-      <SidebarHeader className="flex flex-row h-16 items-center border-b px-3">
-        <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9"
-            onClick={toggleSidebar}
-          >
-            <Menu className="h-5 w-5" />
-        </Button>
-        <div className={cn("flex items-center gap-2 font-bold text-sidebar-foreground", isCollapsed ? "hidden" : "ml-4")}>
+      <SidebarHeader className="flex h-16 items-center justify-center border-b px-3">
+        <div className={cn("flex items-center gap-2 font-bold text-sidebar-foreground", isCollapsed && "hidden")}>
             <PiggyBank className="h-6 w-6 text-sidebar-primary" />
             <span className="text-base whitespace-nowrap">Balance Lumen</span>
         </div>
