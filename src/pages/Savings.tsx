@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Edit, Trash2, PiggyBank, TrendingUp, Coins, ArrowDown, ArrowUp, Calendar as CalendarIcon } from 'lucide-react';
+import { Plus, Edit, Trash2, PiggyBank, TrendingUp, Coins, ArrowDown, ArrowUp, Calendar as CalendarIcon, History, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -48,19 +48,25 @@ import { ptBR } from "date-fns/locale";
 export default function Savings() {
   const { 
     savingsGoals, 
+    savingsMovements,
     accounts, 
     addSavingsGoal, 
     updateSavingsGoal, 
     removeSavingsGoal, 
-    addToSavingsGoal,
-    updateAccount
+    addSavingsMovement,
+    updateSavingsMovement,
+    removeSavingsMovement,
+    getSavingsMovementsByGoal
   } = useFinanceStore();
   const { toast } = useToast();
 
   const [isGoalDialogOpen, setIsGoalDialogOpen] = useState(false);
   const [isTransactionDialogOpen, setIsTransactionDialogOpen] = useState(false);
+  const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
+  const [isEditMovementDialogOpen, setIsEditMovementDialogOpen] = useState(false);
   const [transactionType, setTransactionType] = useState<'add' | 'withdraw'>('add');
   const [deleteGoalId, setDeleteGoalId] = useState<string | null>(null);
+  const [editingMovementId, setEditingMovementId] = useState<string | null>(null);
 
   const [editingGoal, setEditingGoal] = useState<string | null>(null);
   const [selectedGoal, setSelectedGoal] = useState<string | null>(null);
@@ -74,6 +80,14 @@ export default function Savings() {
   const [transactionData, setTransactionData] = useState({
     amount: '',
     accountId: '',
+    note: '',
+  });
+
+  const [editMovementData, setEditMovementData] = useState({
+    amount: '',
+    accountId: '',
+    note: '',
+    date: '',
   });
 
   const formatCurrency = (amount: number) => {
@@ -141,14 +155,6 @@ export default function Savings() {
     setDeleteGoalId(null);
   };
 
-  const withdrawFromSavingsGoal = async (id: string, amount: number) => {
-    const { savingsGoals } = useFinanceStore.getState();
-    const goal = savingsGoals.find(sg => sg.id === id);
-    if (!goal) return;
-
-    const newAmount = Math.max(goal.currentAmount - amount, 0);
-    await updateSavingsGoal(id, { currentAmount: newAmount });
-  };
 
   const handleTransactionSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -177,24 +183,31 @@ export default function Savings() {
             toast({ title: "Saldo insuficiente", description: `Você não tem saldo suficiente na conta "${account.name}".`, variant: "destructive" });
             return;
         }
-        // Adicionar à caixinha e retirar da conta
-        await addToSavingsGoal(selectedGoal, amount);
-        await updateAccount(account.id, { balance: account.balance - amount });
-        toast({ title: "Valor adicionado", description: `${formatCurrency(amount)} foi adicionado à sua caixinha.` });
     } else { // Withdraw
         if (goal.currentAmount < amount) {
             toast({ title: "Valor insuficiente", description: `Você não tem ${formatCurrency(amount)} para retirar desta caixinha.`, variant: "destructive" });
             return;
         }
-        // Retirar da caixinha e adicionar à conta
-        await withdrawFromSavingsGoal(selectedGoal, amount);
-        await updateAccount(account.id, { balance: account.balance + amount });
-        toast({ title: "Valor retirado", description: `${formatCurrency(amount)} foi retirado da sua caixinha.` });
     }
+
+    // Create savings movement that will automatically update balances via triggers
+    await addSavingsMovement({
+        goalId: selectedGoal,
+        accountId: transactionData.accountId,
+        type: transactionType === 'add' ? 'deposit' : 'withdraw',
+        amount: amount,
+        date: new Date().toISOString(),
+        note: transactionData.note || undefined
+    });
+
+    toast({ 
+        title: transactionType === 'add' ? "Valor adicionado" : "Valor retirado", 
+        description: `${formatCurrency(amount)} foi ${transactionType === 'add' ? 'adicionado à' : 'retirado da'} sua caixinha.` 
+    });
 
     setIsTransactionDialogOpen(false);
     setSelectedGoal(null);
-    setTransactionData({ amount: '', accountId: '' });
+    setTransactionData({ amount: '', accountId: '', note: '' });
   };
 
   const openTransactionDialog = (goalId: string, type: 'add' | 'withdraw') => {
@@ -374,6 +387,15 @@ export default function Savings() {
                     </SelectContent>
                 </Select>
             </div>
+            <div className="space-y-2">
+                <Label htmlFor="note">Observação (opcional)</Label>
+                <Input
+                    id="note"
+                    value={transactionData.note}
+                    onChange={(e) => setTransactionData({ ...transactionData, note: e.target.value })}
+                    placeholder="Ex: Economias para viagem..."
+                />
+            </div>
             <DialogFooter>
               <Button type="submit" className={transactionType === 'add' ? 'bg-gradient-success' : 'bg-gradient-destructive'}>
                 {transactionType === 'add' ? <ArrowUp className="mr-2 h-4 w-4" /> : <ArrowDown className="mr-2 h-4 w-4" />}
@@ -446,9 +468,17 @@ export default function Savings() {
                       <ArrowDown className="mr-1 h-3 w-3" />
                       Retirar
                     </Button>
-                    <Button variant="outline" size="icon" onClick={() => handleEdit(goal)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
+                     <Button 
+                       variant="outline" 
+                       size="icon" 
+                       onClick={() => {setSelectedGoal(goal.id); setIsHistoryDialogOpen(true);}}
+                       className="text-blue-600 hover:text-blue-600 border-blue-600 hover:bg-blue-50"
+                     >
+                       <History className="h-4 w-4" />
+                     </Button>
+                     <Button variant="outline" size="icon" onClick={() => handleEdit(goal)}>
+                       <Edit className="h-4 w-4" />
+                     </Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button variant="outline" size="icon" className="text-destructive hover:text-destructive">
@@ -496,6 +526,237 @@ export default function Savings() {
           </CardContent>
         </Card>
       )}
+
+      {/* History Dialog */}
+      <Dialog open={isHistoryDialogOpen} onOpenChange={setIsHistoryDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="h-5 w-5" />
+              Histórico de Movimentações
+            </DialogTitle>
+            <DialogDescription>
+              {selectedGoal && savingsGoals.find(g => g.id === selectedGoal)?.name && 
+                `Histórico da caixinha "${savingsGoals.find(g => g.id === selectedGoal)?.name}"`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {selectedGoal && getSavingsMovementsByGoal(selectedGoal).length > 0 ? (
+              <div className="space-y-3">
+                {getSavingsMovementsByGoal(selectedGoal).map((movement) => {
+                  const account = accounts.find(acc => acc.id === movement.accountId);
+                  return (
+                    <Card key={movement.id} className="bg-background border">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-full ${
+                              movement.type === 'deposit' 
+                                ? 'bg-success/10 text-success' 
+                                : 'bg-destructive/10 text-destructive'
+                            }`}>
+                              {movement.type === 'deposit' ? (
+                                <ArrowUp className="h-4 w-4" />
+                              ) : (
+                                <ArrowDown className="h-4 w-4" />
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-medium">
+                                {movement.type === 'deposit' ? 'Depósito' : 'Retirada'}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {account?.name || 'Conta não encontrada'}
+                              </p>
+                              {movement.note && (
+                                <p className="text-sm text-muted-foreground italic">
+                                  {movement.note}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className={`font-semibold ${
+                              movement.type === 'deposit' ? 'text-success' : 'text-destructive'
+                            }`}>
+                              {movement.type === 'deposit' ? '+' : '-'}{formatCurrency(movement.amount)}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {format(new Date(movement.date), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                            </p>
+                          </div>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                setEditingMovementId(movement.id);
+                                setEditMovementData({
+                                  amount: movement.amount.toString(),
+                                  accountId: movement.accountId,
+                                  note: movement.note || '',
+                                  date: new Date(movement.date).toISOString().slice(0, 16)
+                                });
+                                setIsEditMovementDialogOpen(true);
+                              }}
+                              className="h-8 w-8"
+                            >
+                              <Edit className="h-3 w-3" />
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Excluir Movimentação</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Tem certeza que deseja excluir esta movimentação? Os saldos da conta e caixinha serão ajustados automaticamente.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction 
+                                    onClick={async () => {
+                                      await removeSavingsMovement(movement.id);
+                                      toast({
+                                        title: "Movimentação excluída",
+                                        description: "A movimentação foi excluída e os saldos foram ajustados.",
+                                      });
+                                    }}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    Excluir
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Clock className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Nenhuma movimentação</h3>
+                <p className="text-muted-foreground">
+                  Ainda não há movimentações para esta caixinha.
+                </p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Movement Dialog */}
+      <Dialog open={isEditMovementDialogOpen} onOpenChange={setIsEditMovementDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Editar Movimentação</DialogTitle>
+            <DialogDescription>
+              Altere os dados da movimentação. Os saldos serão ajustados automaticamente.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={async (e) => {
+            e.preventDefault();
+            if (!editingMovementId || !editMovementData.amount || !editMovementData.accountId) {
+              toast({
+                title: "Erro",
+                description: "Preencha todos os campos obrigatórios.",
+                variant: "destructive",
+              });
+              return;
+            }
+
+            const amount = parseFloat(editMovementData.amount);
+            if (amount <= 0) {
+              toast({
+                title: "Erro",
+                description: "O valor deve ser maior que zero.",
+                variant: "destructive",
+              });
+              return;
+            }
+
+            await updateSavingsMovement(editingMovementId, {
+              amount: amount,
+              accountId: editMovementData.accountId,
+              note: editMovementData.note || undefined,
+              date: new Date(editMovementData.date).toISOString()
+            });
+
+            toast({
+              title: "Movimentação atualizada",
+              description: "A movimentação foi atualizada e os saldos foram ajustados.",
+            });
+
+            setIsEditMovementDialogOpen(false);
+            setEditingMovementId(null);
+            setEditMovementData({ amount: '', accountId: '', note: '', date: '' });
+          }} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="editAmount">Valor (R$)</Label>
+              <Input
+                id="editAmount"
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={editMovementData.amount}
+                onChange={(e) => setEditMovementData({ ...editMovementData, amount: e.target.value })}
+                placeholder="0,00"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editAccount">Conta</Label>
+              <Select
+                value={editMovementData.accountId}
+                onValueChange={(value) => setEditMovementData({ ...editMovementData, accountId: value })}
+              >
+                <SelectTrigger id="editAccount">
+                  <SelectValue placeholder="Selecione uma conta" />
+                </SelectTrigger>
+                <SelectContent>
+                  {accounts.map(account => (
+                    <SelectItem key={account.id} value={account.id}>
+                      {account.name} ({formatCurrency(account.balance)})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editDate">Data e Hora</Label>
+              <Input
+                id="editDate"
+                type="datetime-local"
+                value={editMovementData.date}
+                onChange={(e) => setEditMovementData({ ...editMovementData, date: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editNote">Observação (opcional)</Label>
+              <Input
+                id="editNote"
+                value={editMovementData.note}
+                onChange={(e) => setEditMovementData({ ...editMovementData, note: e.target.value })}
+                placeholder="Ex: Economias para viagem..."
+              />
+            </div>
+            <DialogFooter>
+              <Button type="submit" className="bg-gradient-primary">
+                Salvar Alterações
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

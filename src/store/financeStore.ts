@@ -47,6 +47,17 @@ export interface SavingsGoal {
   targetDate?: string | null;
 }
 
+export interface SavingsMovement {
+  id: string;
+  goalId: string;
+  accountId: string;
+  type: 'deposit' | 'withdraw';
+  amount: number;
+  date: string;
+  note?: string;
+  createdAt: string;
+}
+
 export interface WeeklyGoal {
   id: string;
   year: number;
@@ -69,6 +80,7 @@ interface FinanceState {
   categories: Category[];
   specialDates: SpecialDate[];
   savingsGoals: SavingsGoal[];
+  savingsMovements: SavingsMovement[];
   weeklyGoals: WeeklyGoal[];
   monthlyNotes: MonthlyNote[];
   isLoading: boolean;
@@ -100,7 +112,12 @@ interface FinanceState {
   addSavingsGoal: (goal: Omit<SavingsGoal, 'id'>) => Promise<void>;
   updateSavingsGoal: (id: string, goal: Partial<SavingsGoal>) => Promise<void>;
   removeSavingsGoal: (id: string) => Promise<void>;
-  addToSavingsGoal: (id: string, amount: number) => Promise<void>;
+  
+  // Savings movements methods
+  addSavingsMovement: (movement: Omit<SavingsMovement, 'id' | 'createdAt'>) => Promise<void>;
+  updateSavingsMovement: (id: string, movement: Partial<SavingsMovement>) => Promise<void>;
+  removeSavingsMovement: (id: string) => Promise<void>;
+  getSavingsMovementsByGoal: (goalId: string) => SavingsMovement[];
 
   // Weekly goals methods
   setWeeklyGoal: (goal: Omit<WeeklyGoal, 'id'>) => Promise<void>;
@@ -130,6 +147,7 @@ export const useFinanceStore = create<FinanceState>()(
       categories: [],
       specialDates: [],
       savingsGoals: [],
+      savingsMovements: [],
       weeklyGoals: [],
       monthlyNotes: [],
       isLoading: false,
@@ -148,6 +166,7 @@ export const useFinanceStore = create<FinanceState>()(
             transactionsResult,
             specialDatesResult,
             savingsGoalsResult,
+            savingsMovementsResult,
             weeklyGoalsResult,
             monthlyNotesResult
           ] = await Promise.all([
@@ -156,6 +175,7 @@ export const useFinanceStore = create<FinanceState>()(
             supabase.from('transactions').select('*').eq('user_id', user.id),
             supabase.from('special_dates').select('*').eq('user_id', user.id),
             supabase.from('savings_goals').select('*').eq('user_id', user.id),
+            supabase.from('savings_movements').select('*').eq('user_id', user.id).order('date', { ascending: false }),
             supabase.from('weekly_goals').select('*').eq('user_id', user.id),
             supabase.from('monthly_notes').select('*').eq('user_id', user.id)
           ]);
@@ -224,6 +244,17 @@ export const useFinanceStore = create<FinanceState>()(
             targetDate: sg.target_date || null
           })) || [];
 
+          const savingsMovements = savingsMovementsResult.data?.map(sm => ({
+            id: sm.id,
+            goalId: sm.goal_id,
+            accountId: sm.account_id,
+            type: sm.type as 'deposit' | 'withdraw',
+            amount: Number(sm.amount),
+            date: new Date(sm.date).toISOString(),
+            note: sm.note || undefined,
+            createdAt: sm.created_at
+          })) || [];
+
           const weeklyGoals = weeklyGoalsResult.data?.map(wg => ({
             id: wg.id,
             year: wg.year,
@@ -246,6 +277,7 @@ export const useFinanceStore = create<FinanceState>()(
             transactions,
             specialDates,
             savingsGoals,
+            savingsMovements,
             weeklyGoals,
             monthlyNotes,
             isLoading: false
@@ -677,25 +709,81 @@ export const useFinanceStore = create<FinanceState>()(
         }
       },
 
-      addToSavingsGoal: async (id, amount) => {
-        const { savingsGoals } = get();
-        const goal = savingsGoals.find(sg => sg.id === id);
-        if (!goal) return;
+      // Savings movements methods
+      addSavingsMovement: async (movement) => {
+        const { user } = useAuthStore.getState();
+        if (!user) return;
 
-        const newAmount = Math.min(goal.currentAmount + amount, goal.targetAmount);
-        
+        const { data, error } = await supabase
+          .from('savings_movements')
+          .insert({
+            user_id: user.id,
+            goal_id: movement.goalId,
+            account_id: movement.accountId,
+            type: movement.type,
+            amount: movement.amount,
+            date: movement.date,
+            note: movement.note
+          })
+          .select()
+          .single();
+
+        if (!error && data) {
+          const newMovement = {
+            id: data.id,
+            goalId: data.goal_id,
+            accountId: data.account_id,
+            type: data.type as 'deposit' | 'withdraw',
+            amount: Number(data.amount),
+            date: new Date(data.date).toISOString(),
+            note: data.note || undefined,
+            createdAt: data.created_at
+          };
+          set(state => ({ 
+            savingsMovements: [newMovement, ...state.savingsMovements]
+          }));
+        }
+      },
+
+      updateSavingsMovement: async (id, movement) => {
+        const updateData: any = {};
+        if (movement.goalId !== undefined) updateData.goal_id = movement.goalId;
+        if (movement.accountId !== undefined) updateData.account_id = movement.accountId;
+        if (movement.type !== undefined) updateData.type = movement.type;
+        if (movement.amount !== undefined) updateData.amount = movement.amount;
+        if (movement.date !== undefined) updateData.date = movement.date;
+        if (movement.note !== undefined) updateData.note = movement.note;
+
         const { error } = await supabase
-          .from('savings_goals')
-          .update({ current_amount: newAmount })
+          .from('savings_movements')
+          .update(updateData)
           .eq('id', id);
 
         if (!error) {
           set(state => ({
-            savingsGoals: state.savingsGoals.map(sg =>
-              sg.id === id ? { ...sg, currentAmount: newAmount } : sg
+            savingsMovements: state.savingsMovements.map(sm =>
+              sm.id === id ? { ...sm, ...movement } : sm
             )
           }));
         }
+      },
+
+      removeSavingsMovement: async (id) => {
+        const { error } = await supabase
+          .from('savings_movements')
+          .delete()
+          .eq('id', id);
+
+        if (!error) {
+          set(state => ({
+            savingsMovements: state.savingsMovements.filter(sm => sm.id !== id)
+          }));
+        }
+      },
+
+      getSavingsMovementsByGoal: (goalId) => {
+        const { savingsMovements } = get();
+        return savingsMovements.filter(sm => sm.goalId === goalId);
       },
 
       setWeeklyGoal: async (goal) => {

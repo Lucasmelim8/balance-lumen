@@ -131,6 +131,60 @@ export type Database = {
         }
         Relationships: []
       }
+      savings_movements: {
+        Row: {
+          account_id: string
+          amount: number
+          created_at: string
+          date: string
+          goal_id: string
+          id: string
+          note: string | null
+          type: Database["public"]["Enums"]["savings_movement_type"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          amount: number
+          created_at?: string
+          date?: string
+          goal_id: string
+          id?: string
+          note?: string | null
+          type: Database["public"]["Enums"]["savings_movement_type"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          amount?: number
+          created_at?: string
+          date?: string
+          goal_id?: string
+          id?: string
+          note?: string | null
+          type?: Database["public"]["Enums"]["savings_movement_type"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "savings_movements_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "savings_movements_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "savings_goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       special_dates: {
         Row: {
           created_at: string
@@ -270,11 +324,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      apply_savings_movement: {
+        Args: {
+          is_reverse: boolean
+          movement: Database["public"]["Tables"]["savings_movements"]["Row"]
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       account_type: "checking" | "savings" | "credit"
       payment_type: "single" | "monthly" | "recurring"
+      savings_movement_type: "deposit" | "withdraw"
       transaction_type: "income" | "expense"
     }
     CompositeTypes: {
@@ -405,6 +466,7 @@ export const Constants = {
     Enums: {
       account_type: ["checking", "savings", "credit"],
       payment_type: ["single", "monthly", "recurring"],
+      savings_movement_type: ["deposit", "withdraw"],
       transaction_type: ["income", "expense"],
     },
   },
