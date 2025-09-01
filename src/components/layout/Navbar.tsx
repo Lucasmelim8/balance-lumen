@@ -10,18 +10,21 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuthStore } from '@/store/authStore';
-import { SidebarTrigger } from '@/components/ui/sidebar';
+import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
 import { Clock } from './Clock'; 
 
 export function Navbar() {
   const { user, logout } = useAuthStore();
+  const { state, isMobile } = useSidebar();
+  const isCollapsed = state === 'collapsed';
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-card shadow-soft">
       <div className="flex h-16 items-center px-6">
         {/* Left - Sidebar Toggle */}
         <div className="flex items-center gap-4">
-          <SidebarTrigger />
+          {/* Mostra o gatilho no mobile OU quando a sidebar está colapsada no desktop */}
+          {(isMobile || isCollapsed) && <SidebarTrigger />}
         </div>
 
         {/* Center - Clock */}
@@ -98,4 +101,3 @@ export function Navbar() {
     </header>
   );
 }
-
