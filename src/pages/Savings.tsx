@@ -15,6 +15,17 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -34,21 +45,22 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 
-// Mock de contas do usuário, substitua pelo seu estado global ou props
-const userAccounts = [
-    { id: 'acc1', name: 'Conta Corrente', balance: 5000 },
-    { id: 'acc2', name: 'Poupança', balance: 15000 },
-    { id: 'acc3', name: 'Carteira', balance: 350 },
-];
-
-
 export default function Savings() {
-  const { savingsGoals, addSavingsGoal, updateSavingsGoal, removeSavingsGoal, addToSavingsGoal } = useFinanceStore();
+  const { 
+    savingsGoals, 
+    accounts, 
+    addSavingsGoal, 
+    updateSavingsGoal, 
+    removeSavingsGoal, 
+    addToSavingsGoal,
+    updateAccount
+  } = useFinanceStore();
   const { toast } = useToast();
 
   const [isGoalDialogOpen, setIsGoalDialogOpen] = useState(false);
   const [isTransactionDialogOpen, setIsTransactionDialogOpen] = useState(false);
   const [transactionType, setTransactionType] = useState<'add' | 'withdraw'>('add');
+  const [deleteGoalId, setDeleteGoalId] = useState<string | null>(null);
 
   const [editingGoal, setEditingGoal] = useState<string | null>(null);
   const [selectedGoal, setSelectedGoal] = useState<string | null>(null);
@@ -120,15 +132,25 @@ export default function Savings() {
     setIsGoalDialogOpen(true);
   };
 
-  const handleDelete = (goalId: string) => {
-    removeSavingsGoal(goalId);
+  const handleDelete = async (goalId: string) => {
+    await removeSavingsGoal(goalId);
     toast({
       title: "Meta removida",
       description: "A meta de economia foi removida com sucesso.",
     });
+    setDeleteGoalId(null);
   };
 
-  const handleTransactionSubmit = (e: React.FormEvent) => {
+  const withdrawFromSavingsGoal = async (id: string, amount: number) => {
+    const { savingsGoals } = useFinanceStore.getState();
+    const goal = savingsGoals.find(sg => sg.id === id);
+    if (!goal) return;
+
+    const newAmount = Math.max(goal.currentAmount - amount, 0);
+    await updateSavingsGoal(id, { currentAmount: newAmount });
+  };
+
+  const handleTransactionSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedGoal || !transactionData.amount || !transactionData.accountId) {
         toast({
@@ -140,7 +162,7 @@ export default function Savings() {
     }
 
     const amount = parseFloat(transactionData.amount);
-    const account = userAccounts.find(acc => acc.id === transactionData.accountId);
+    const account = accounts.find(acc => acc.id === transactionData.accountId);
     const goal = savingsGoals.find(g => g.id === selectedGoal);
 
     if (!account || !goal) return;
@@ -155,18 +177,18 @@ export default function Savings() {
             toast({ title: "Saldo insuficiente", description: `Você não tem saldo suficiente na conta "${account.name}".`, variant: "destructive" });
             return;
         }
-        addToSavingsGoal(selectedGoal, amount);
-        // Aqui você também deveria atualizar o saldo da conta no seu estado global
+        // Adicionar à caixinha e retirar da conta
+        await addToSavingsGoal(selectedGoal, amount);
+        await updateAccount(account.id, { balance: account.balance - amount });
         toast({ title: "Valor adicionado", description: `${formatCurrency(amount)} foi adicionado à sua caixinha.` });
     } else { // Withdraw
         if (goal.currentAmount < amount) {
             toast({ title: "Valor insuficiente", description: `Você não tem ${formatCurrency(amount)} para retirar desta caixinha.`, variant: "destructive" });
             return;
         }
-        // Simulate withdraw function (since it doesn't exist in store)
-        const newAmount = Math.max(goal.currentAmount - amount, 0);
-        updateSavingsGoal(selectedGoal, { currentAmount: newAmount });
-        // Aqui você também deveria atualizar o saldo da conta no seu estado global
+        // Retirar da caixinha e adicionar à conta
+        await withdrawFromSavingsGoal(selectedGoal, amount);
+        await updateAccount(account.id, { balance: account.balance + amount });
         toast({ title: "Valor retirado", description: `${formatCurrency(amount)} foi retirado da sua caixinha.` });
     }
 
@@ -344,7 +366,7 @@ export default function Savings() {
                         <SelectValue placeholder="Selecione uma conta" />
                     </SelectTrigger>
                     <SelectContent>
-                        {userAccounts.map(account => (
+                        {accounts.map(account => (
                             <SelectItem key={account.id} value={account.id}>
                                 {account.name} ({formatCurrency(account.balance)})
                             </SelectItem>
@@ -427,9 +449,32 @@ export default function Savings() {
                     <Button variant="outline" size="icon" onClick={() => handleEdit(goal)}>
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="outline" size="icon" onClick={() => handleDelete(goal.id)} className="text-destructive hover:text-destructive">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="outline" size="icon" className="text-destructive hover:text-destructive">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Excluir caixinha</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Tem certeza que deseja excluir a caixinha "{goal.name}"? 
+                            {goal.currentAmount > 0 && ` Você tem ${formatCurrency(goal.currentAmount)} guardado nela.`}
+                            Esta ação não pode ser desfeita.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction 
+                            onClick={() => handleDelete(goal.id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Excluir
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </CardContent>
               </Card>
