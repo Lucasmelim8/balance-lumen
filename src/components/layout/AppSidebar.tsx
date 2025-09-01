@@ -66,7 +66,7 @@ export function AppSidebar() {
           <SidebarMenuItem key={item.title}>
             <SidebarMenuButton
               asChild
-              tooltip={item.title}
+              tooltip={isCollapsed ? item.title : undefined}
               className={cn(
                 "w-full justify-start gap-3 px-3 py-2.5 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-primary transition-all duration-200 rounded-lg",
                 isActive &&
@@ -75,7 +75,7 @@ export function AppSidebar() {
             >
               <NavLink to={item.url} className="flex items-center gap-3">
                 <item.icon className="h-5 w-5 flex-shrink-0" />
-                {!isCollapsed && <span className="text-sm">{item.title}</span>}
+                <span className={cn("text-sm", isCollapsed && "sr-only")}>{item.title}</span>
               </NavLink>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -86,7 +86,7 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon" className="bg-sidebar-background border-r border-sidebar-border flex flex-col">
-      <SidebarHeader className="flex h-16 items-center border-b px-3">
+      <SidebarHeader className="flex flex-row h-16 items-center border-b px-3">
         <Button
             variant="ghost"
             size="icon"
@@ -95,9 +95,9 @@ export function AppSidebar() {
           >
             <Menu className="h-5 w-5" />
         </Button>
-        <div className={cn("flex items-center gap-2 font-bold text-sidebar-foreground transition-opacity duration-200", isCollapsed ? "opacity-0 w-0" : "opacity-100 ml-4")}>
+        <div className={cn("flex items-center gap-2 font-bold text-sidebar-foreground", isCollapsed ? "hidden" : "ml-4")}>
             <PiggyBank className="h-6 w-6 text-sidebar-primary" />
-            <span className="text-base">Balance Lumen</span>
+            <span className="text-base whitespace-nowrap">Balance Lumen</span>
         </div>
       </SidebarHeader>
 
@@ -123,11 +123,11 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton 
               onClick={handleLogout} 
-              tooltip="Sair"
+              tooltip={isCollapsed ? "Sair" : undefined}
               className="w-full justify-start gap-3 px-3 py-2.5 hover:bg-sidebar-accent transition rounded-lg text-red-500 hover:text-red-600"
             >
               <LogOut className="h-5 w-5" />
-              {!isCollapsed && <span className="text-sm">Sair</span>}
+              <span className={cn("text-sm", isCollapsed && "sr-only")}>Sair</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
