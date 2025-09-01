@@ -75,7 +75,7 @@ export function AppSidebar() {
             >
               <NavLink to={item.url} className="flex items-center gap-3">
                 <item.icon className="h-5 w-5 flex-shrink-0" />
-                <span className="text-sm">{item.title}</span>
+                {!isCollapsed && <span className="text-sm">{item.title}</span>}
               </NavLink>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -127,7 +127,7 @@ export function AppSidebar() {
               className="w-full justify-start gap-3 px-3 py-2.5 hover:bg-sidebar-accent transition rounded-lg text-red-500 hover:text-red-600"
             >
               <LogOut className="h-5 w-5" />
-              <span className="text-sm">Sair</span>
+              {!isCollapsed && <span className="text-sm">Sair</span>}
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
