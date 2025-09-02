@@ -11,8 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuthStore } from '@/store/authStore';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { ThemeToggle } from '@/components/ui/theme-toggle';
-import { Clock } from './Clock';
+import { Clock } from './Clock'; 
 
 export function Navbar() {
   const { user, logout } = useAuthStore();
@@ -30,11 +29,8 @@ export function Navbar() {
           <Clock />
         </div>
 
-        {/* Right - Notifications, Theme Toggle and User Menu */}
+        {/* Right - Notifications and User Menu */}
         <div className="flex items-center gap-3">
-          {/* Theme Toggle */}
-          <ThemeToggle />
-          
           {/* Notifications Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
