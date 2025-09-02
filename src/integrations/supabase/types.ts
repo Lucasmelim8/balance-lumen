@@ -101,6 +101,60 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          color_theme: string | null
+          compact_mode: boolean | null
+          created_at: string
+          currency: string | null
+          default_page: string | null
+          email_notifications: boolean | null
+          first_name: string | null
+          id: string
+          last_name: string | null
+          number_format: string | null
+          push_notifications: boolean | null
+          sidebar_auto_collapse: boolean | null
+          special_dates_reminder: boolean | null
+          theme: string | null
+          updated_at: string
+        }
+        Insert: {
+          color_theme?: string | null
+          compact_mode?: boolean | null
+          created_at?: string
+          currency?: string | null
+          default_page?: string | null
+          email_notifications?: boolean | null
+          first_name?: string | null
+          id: string
+          last_name?: string | null
+          number_format?: string | null
+          push_notifications?: boolean | null
+          sidebar_auto_collapse?: boolean | null
+          special_dates_reminder?: boolean | null
+          theme?: string | null
+          updated_at?: string
+        }
+        Update: {
+          color_theme?: string | null
+          compact_mode?: boolean | null
+          created_at?: string
+          currency?: string | null
+          default_page?: string | null
+          email_notifications?: boolean | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          number_format?: string | null
+          push_notifications?: boolean | null
+          sidebar_auto_collapse?: boolean | null
+          special_dates_reminder?: boolean | null
+          theme?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       savings_goals: {
         Row: {
           created_at: string
