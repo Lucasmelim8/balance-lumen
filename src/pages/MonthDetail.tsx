@@ -342,32 +342,57 @@ export default function MonthDetail() {
                 </Card>
             </div>
             <div className="lg:col-span-1 space-y-6">
+                {relevantSpecialDates.length > 0 && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Calendar className="h-5 w-5"/>
+                                Datas Especiais do Mês
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                            {relevantSpecialDates.map(specialDate => (
+                                <div key={specialDate.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                                    <div>
+                                        <p className="font-medium">{specialDate.name}</p>
+                                        <p className="text-sm text-muted-foreground">
+                                            {new Date(specialDate.date).toLocaleDateString('pt-BR')}
+                                        </p>
+                                        {specialDate.description && (
+                                            <p className="text-xs text-muted-foreground mt-1">{specialDate.description}</p>
+                                        )}
+                                    </div>
+                                    <div className="flex flex-col gap-1">
+                                        {specialDate.isRecurring && (
+                                            <div className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full text-center">
+                                                Anual
+                                            </div>
+                                        )}
+                                        {specialDate.isCompleted ? (
+                                            <div className="bg-green-500 text-white text-xs px-2 py-1 rounded-full text-center">
+                                                Concluído
+                                            </div>
+                                        ) : (
+                                            <div className="bg-orange-500 text-white text-xs px-2 py-1 rounded-full text-center">
+                                                Pendente
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </CardContent>
+                    </Card>
+                )}
                 <Card>
                     <CardHeader><CardTitle className="flex items-center gap-2"><StickyNote className="h-5 w-5"/>Anotações do Mês</CardTitle></CardHeader>
                     <CardContent className="space-y-2">
-                        <Textarea 
+                        <Textarea
                             placeholder="Adicione suas anotações para este mês..." 
                             rows={5}
                             value={noteContent}
                             onChange={(e) => setNoteContent(e.target.value)}
                         />
                         <Button onClick={handleSaveNote} className="w-full">Salvar Anotação</Button>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader><CardTitle className="flex items-center gap-2"><Calendar className="h-5 w-5"/>Datas Especiais</CardTitle></CardHeader>
-                    <CardContent>
-                        {relevantSpecialDates.length > 0 ? (
-                            <ul className="space-y-2">
-                                {relevantSpecialDates.map(d => (
-                                    <li key={d.id} className="text-sm">
-                                        <span className="font-semibold">{format(new Date(d.date), 'dd/MM')}</span>: {d.name}
-                                    </li>
-                                ))}
-                            </ul>
-                        ) : (
-                            <p className="text-sm text-muted-foreground">Nenhuma data especial este mês.</p>
-                        )}
                     </CardContent>
                 </Card>
             </div>
