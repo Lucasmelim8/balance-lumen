@@ -18,79 +18,87 @@ import Reports from "./pages/Reports";
 import MonthDetail from "./pages/MonthDetail";
 import NotFound from "./pages/NotFound";
 
+const queryClient = new QueryClient();
+
 const App = () => (
-  <TooltipProvider>
-    <Toaster />
-    <Sonner />
-    <Routes>
-      {/* Public routes */}
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      
-      {/* Protected routes */}
-      <Route path="/" element={<Navigate to="/home" replace />} />
-      <Route path="/home" element={
-        <AuthGuard>
-          <MainLayout>
-            <Home />
-          </MainLayout>
-        </AuthGuard>
-      } />
-      <Route path="/transactions" element={
-        <AuthGuard>
-          <MainLayout>
-            <Transactions />
-          </MainLayout>
-        </AuthGuard>
-      } />
-       <Route path="/reports" element={
-        <AuthGuard>
-          <MainLayout>
-            <Reports />
-          </MainLayout>
-        </AuthGuard>
-      } />
-      {/* NOVO: Rota para o detalhe do mês */}
-      <Route path="/reports/:year/:month" element={
-        <AuthGuard>
-          <MainLayout>
-            <MonthDetail />
-          </MainLayout>
-        </AuthGuard>
-      } />
-      <Route path="/categories" element={
-        <AuthGuard>
-          <MainLayout>
-            <Categories />
-          </MainLayout>
-        </AuthGuard>
-      } />
-      <Route path="/special-dates" element={
-        <AuthGuard>
-          <MainLayout>
-            <SpecialDates />
-          </MainLayout>
-        </AuthGuard>
-      } />
-      <Route path="/savings" element={
-        <AuthGuard>
-          <MainLayout>
-            <Savings />
-          </MainLayout>
-        </AuthGuard>
-      } />
-      <Route path="/settings" element={
-        <AuthGuard>
-          <MainLayout>
-            <Settings />
-          </MainLayout>
-        </AuthGuard>
-      } />
-      
-      {/* Catch-all route */}
-      <Route path="*" element={<NotFound />} />
-    </Routes>
-  </TooltipProvider>
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <AuthProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+        <Routes>
+          {/* Public routes */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          
+          {/* Protected routes */}
+          <Route path="/" element={<Navigate to="/home" replace />} />
+          <Route path="/home" element={
+            <AuthGuard>
+              <MainLayout>
+                <Home />
+              </MainLayout>
+            </AuthGuard>
+          } />
+          <Route path="/transactions" element={
+            <AuthGuard>
+              <MainLayout>
+                <Transactions />
+              </MainLayout>
+            </AuthGuard>
+          } />
+           <Route path="/reports" element={
+            <AuthGuard>
+              <MainLayout>
+                <Reports />
+              </MainLayout>
+            </AuthGuard>
+          } />
+          {/* NOVO: Rota para o detalhe do mês */}
+          <Route path="/reports/:year/:month" element={
+            <AuthGuard>
+              <MainLayout>
+                <MonthDetail />
+              </MainLayout>
+            </AuthGuard>
+          } />
+          <Route path="/categories" element={
+            <AuthGuard>
+              <MainLayout>
+                <Categories />
+              </MainLayout>
+            </AuthGuard>
+          } />
+          <Route path="/special-dates" element={
+            <AuthGuard>
+              <MainLayout>
+                <SpecialDates />
+              </MainLayout>
+            </AuthGuard>
+          } />
+          <Route path="/savings" element={
+            <AuthGuard>
+              <MainLayout>
+                <Savings />
+              </MainLayout>
+            </AuthGuard>
+          } />
+          <Route path="/settings" element={
+            <AuthGuard>
+              <MainLayout>
+                <Settings />
+              </MainLayout>
+            </AuthGuard>
+          } />
+          
+          {/* Catch-all route */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+      </AuthProvider>
+    </TooltipProvider>
+  </QueryClientProvider>
 );
 
 export default App;
