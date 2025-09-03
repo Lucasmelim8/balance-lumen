@@ -1,11 +1,10 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { ThemeProvider as NextThemesProvider, useTheme as useNextTheme } from 'next-themes';
-import { useUserProfile } from '@/hooks/useUserProfile';
 
 type Theme = 'dark' | 'light' | 'system';
 
 type ThemeProviderProps = {
-  children: React.ReactNode;
+  children: ReactNode;
   defaultTheme?: Theme;
   storageKey?: string;
   attribute?: string;
@@ -13,15 +12,35 @@ type ThemeProviderProps = {
   disableTransitionOnChange?: boolean;
 };
 
+const ThemeProviderContext = createContext<{
+  theme: string | undefined;
+  setTheme: (theme: string) => void;
+  systemTheme: string | undefined;
+}>({
+  theme: undefined,
+  setTheme: () => null,
+  systemTheme: undefined,
+});
+
 export function ThemeProvider({
   children,
   defaultTheme = 'system',
   storageKey = 'finance-app-theme',
   attribute = 'class',
   enableSystem = true,
-  disableTransitionOnChange = false,
+  disableTransitionOnChange = true,
   ...props
 }: ThemeProviderProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <div style={{ visibility: 'hidden' }}>{children}</div>;
+  }
+
   return (
     <NextThemesProvider
       attribute={attribute}
@@ -31,41 +50,9 @@ export function ThemeProvider({
       disableTransitionOnChange={disableTransitionOnChange}
       {...props}
     >
-      <ThemeSync>
-        {children}
-      </ThemeSync>
+      {children}
     </NextThemesProvider>
   );
-}
-
-function ThemeSync({ children }: { children: React.ReactNode }) {
-  const { profile, updateProfile } = useUserProfile();
-  const { theme, setTheme } = useNextTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Sync theme from profile when it loads
-  useEffect(() => {
-    if (mounted && profile?.theme && profile.theme !== theme) {
-      setTheme(profile.theme);
-    }
-  }, [profile?.theme, theme, setTheme, mounted]);
-
-  // Save theme changes to profile
-  useEffect(() => {
-    if (mounted && profile && theme && theme !== profile.theme) {
-      updateProfile({ theme: theme as 'light' | 'dark' | 'system' });
-    }
-  }, [theme, profile, updateProfile, mounted]);
-
-  if (!mounted) {
-    return null;
-  }
-
-  return <>{children}</>;
 }
 
 export const useTheme = useNextTheme;

@@ -14,13 +14,20 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useFinanceStore } from '@/store/financeStore';
 import { useUserProfile, UserProfile } from '@/hooks/useUserProfile';
-import { useRef } from 'react';
+import { useRef, useEffect, useState } from 'react';
+import { useTheme } from 'next-themes';
 
 export default function Settings() {
   const { toast } = useToast();
   const { transactions, categories, accounts, addTransaction, addAccount } = useFinanceStore();
   const { profile, updateProfile, isLoading } = useUserProfile();
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleSettingChange = async (setting: string, value: any, profileKey?: keyof UserProfile) => {
     if (profileKey && profile) {
@@ -231,11 +238,22 @@ export default function Settings() {
               </div>
               <Switch
                 id="dark-mode"
-                checked={profile?.theme === 'dark'}
-                disabled={isLoading}
-                onCheckedChange={(checked) => 
-                  handleSettingChange('Modo Escuro', checked ? 'dark' : 'system', 'theme')
-                }
+                checked={mounted && theme === 'dark'}
+                disabled={isLoading || !mounted}
+                onCheckedChange={(checked) => {
+                  const newTheme = checked ? 'dark' : 'light';
+                  setTheme(newTheme);
+                  // Save to profile after a delay to avoid conflicts
+                  setTimeout(() => {
+                    if (profile) {
+                      updateProfile({ theme: newTheme });
+                    }
+                  }, 100);
+                  toast({
+                    title: "Modo Escuro",
+                    description: `Tema ${checked ? 'escuro' : 'claro'} ativado`,
+                  });
+                }}
               />
             </div>
 
