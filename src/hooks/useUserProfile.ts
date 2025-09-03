@@ -76,7 +76,7 @@ export const useUserProfile = () => {
             special_dates_reminder: true,
           })
           .select()
-          .single();
+          .maybeSingle();
 
         if (!createError && newProfile) {
           setProfile({
