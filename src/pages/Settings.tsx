@@ -13,18 +13,36 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useFinanceStore } from '@/store/financeStore';
+import { useUserProfile, UserProfile } from '@/hooks/useUserProfile';
 import { useRef } from 'react';
 
 export default function Settings() {
   const { toast } = useToast();
   const { transactions, categories, accounts, addTransaction, addAccount } = useFinanceStore();
+  const { profile, updateProfile, isLoading } = useUserProfile();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleSettingChange = (setting: string, value: any) => {
-    toast({
-      title: "Configuração atualizada",
-      description: `${setting} foi alterado com sucesso`,
-    });
+  const handleSettingChange = async (setting: string, value: any, profileKey?: keyof UserProfile) => {
+    if (profileKey && profile) {
+      const success = await updateProfile({ [profileKey]: value });
+      if (success) {
+        toast({
+          title: "Configuração atualizada",
+          description: `${setting} foi alterado com sucesso`,
+        });
+      } else {
+        toast({
+          title: "Erro",
+          description: "Falha ao salvar a configuração",
+          variant: "destructive",
+        });
+      }
+    } else {
+      toast({
+        title: "Configuração atualizada",
+        description: `${setting} foi alterado com sucesso`,
+      });
+    }
   };
 
   const downloadTemplate = () => {
@@ -213,15 +231,20 @@ export default function Settings() {
               </div>
               <Switch
                 id="dark-mode"
-                onCheckedChange={(checked) => handleSettingChange('Modo Escuro', checked)}
+                checked={profile?.theme === 'dark'}
+                disabled={isLoading}
+                onCheckedChange={(checked) => 
+                  handleSettingChange('Modo Escuro', checked ? 'dark' : 'system', 'theme')
+                }
               />
             </div>
 
             <div className="space-y-2">
               <Label>Tema de Cores</Label>
               <Select 
-                defaultValue="blue"
-                onValueChange={(value) => handleSettingChange('Tema de Cores', value)}
+                value={profile?.colorTheme || 'blue'}
+                disabled={isLoading}
+                onValueChange={(value) => handleSettingChange('Tema de Cores', value, 'colorTheme')}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -252,8 +275,9 @@ export default function Settings() {
             <div className="space-y-2">
               <Label>Moeda Principal</Label>
               <Select 
-                defaultValue="BRL"
-                onValueChange={(value) => handleSettingChange('Moeda Principal', value)}
+                value={profile?.currency || 'BRL'}
+                disabled={isLoading}
+                onValueChange={(value) => handleSettingChange('Moeda Principal', value, 'currency')}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -270,8 +294,9 @@ export default function Settings() {
             <div className="space-y-2">
               <Label>Formato de Número</Label>
               <Select 
-                defaultValue="br"
-                onValueChange={(value) => handleSettingChange('Formato de Número', value)}
+                value={profile?.numberFormat || 'br'}
+                disabled={isLoading}
+                onValueChange={(value) => handleSettingChange('Formato de Número', value, 'numberFormat')}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -307,7 +332,9 @@ export default function Settings() {
               </div>
               <Switch
                 id="compact-mode"
-                onCheckedChange={(checked) => handleSettingChange('Modo Compacto', checked)}
+                checked={profile?.compactMode || false}
+                disabled={isLoading}
+                onCheckedChange={(checked) => handleSettingChange('Modo Compacto', checked, 'compactMode')}
               />
             </div>
 
@@ -320,16 +347,18 @@ export default function Settings() {
               </div>
               <Switch
                 id="sidebar-auto-collapse"
-                defaultChecked
-                onCheckedChange={(checked) => handleSettingChange('Sidebar Auto-colapsar', checked)}
+                checked={profile?.sidebarAutoCollapse ?? true}
+                disabled={isLoading}
+                onCheckedChange={(checked) => handleSettingChange('Sidebar Auto-colapsar', checked, 'sidebarAutoCollapse')}
               />
             </div>
 
             <div className="space-y-2">
               <Label>Página Inicial</Label>
               <Select 
-                defaultValue="dashboard"
-                onValueChange={(value) => handleSettingChange('Página Inicial', value)}
+                value={profile?.defaultPage || 'dashboard'}
+                disabled={isLoading}
+                onValueChange={(value) => handleSettingChange('Página Inicial', value, 'defaultPage')}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -431,8 +460,9 @@ export default function Settings() {
               </div>
               <Switch
                 id="email-notifications" 
-                defaultChecked
-                onCheckedChange={(checked) => handleSettingChange('Notificações por Email', checked)}
+                checked={profile?.emailNotifications ?? true}
+                disabled={isLoading}
+                onCheckedChange={(checked) => handleSettingChange('Notificações por Email', checked, 'emailNotifications')}
               />
             </div>
 
@@ -445,7 +475,9 @@ export default function Settings() {
               </div>
               <Switch
                 id="push-notifications"
-                onCheckedChange={(checked) => handleSettingChange('Notificações Push', checked)}
+                checked={profile?.pushNotifications || false}
+                disabled={isLoading}
+                onCheckedChange={(checked) => handleSettingChange('Notificações Push', checked, 'pushNotifications')}
               />
             </div>
 
@@ -458,8 +490,9 @@ export default function Settings() {
               </div>
               <Switch
                 id="special-dates-reminder"
-                defaultChecked
-                onCheckedChange={(checked) => handleSettingChange('Lembrete de Datas Especiais', checked)}
+                checked={profile?.specialDatesReminder ?? true}
+                disabled={isLoading}
+                onCheckedChange={(checked) => handleSettingChange('Lembrete de Datas Especiais', checked, 'specialDatesReminder')}
               />
             </div>
           </CardContent>
