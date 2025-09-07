@@ -129,6 +129,9 @@ interface FinanceState {
   getTotalBalance: () => number;
   getTotalIncome: (month?: number, year?: number) => number;
   getTotalExpenses: (month?: number, year?: number) => number;
+  
+  // Clear all user data
+  clearAllData: () => Promise<void>;
 }
 
 const initialCategories: Category[] = [
@@ -902,6 +905,39 @@ export const useFinanceStore = create<FinanceState>()(
             return tx.type === 'expense' && matchMonth && matchYear;
           })
           .reduce((total, tx) => total + tx.amount, 0);
+      },
+
+      clearAllData: async () => {
+        const { user } = useAuthStore.getState();
+        if (!user) return;
+
+        try {
+          // Delete all user data from Supabase in parallel
+          await Promise.all([
+            supabase.from('transactions').delete().eq('user_id', user.id),
+            supabase.from('accounts').delete().eq('user_id', user.id),
+            supabase.from('special_dates').delete().eq('user_id', user.id),
+            supabase.from('savings_movements').delete().eq('user_id', user.id),
+            supabase.from('savings_goals').delete().eq('user_id', user.id),
+            supabase.from('weekly_goals').delete().eq('user_id', user.id),
+            supabase.from('monthly_notes').delete().eq('user_id', user.id),
+            // Keep categories as they are created by default
+          ]);
+
+          // Clear local state
+          set({
+            accounts: [],
+            transactions: [],
+            specialDates: [],
+            savingsGoals: [],
+            savingsMovements: [],
+            weeklyGoals: [],
+            monthlyNotes: [],
+          });
+        } catch (error) {
+          console.error('Error clearing user data:', error);
+          throw error;
+        }
       },
     }),
     {

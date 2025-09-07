@@ -1,4 +1,4 @@
-import { Settings as SettingsIcon, Palette, DollarSign, Layout, Upload, Download, FileSpreadsheet } from 'lucide-react';
+import { Settings as SettingsIcon, Palette, DollarSign, Layout, Upload, Download, FileSpreadsheet, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -11,14 +11,47 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useFinanceStore } from '@/store/financeStore';
-import { useRef } from 'react';
+import { useTheme } from '@/components/layout/ThemeProvider';
+import { useRef, useState } from 'react';
 
 export default function Settings() {
   const { toast } = useToast();
-  const { transactions, categories, accounts, addTransaction, addAccount } = useFinanceStore();
+  const { theme, setTheme } = useTheme();
+  const { transactions, categories, accounts, addTransaction, addAccount, clearAllData } = useFinanceStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isClearing, setIsClearing] = useState(false);
+
+  const handleClearAllData = async () => {
+    setIsClearing(true);
+    try {
+      await clearAllData();
+      toast({
+        title: "Dados limpos",
+        description: "Todos os seus dados foram removidos com sucesso",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao limpar dados",
+        description: "Ocorreu um erro ao limpar os dados. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsClearing(false);
+    }
+  };
 
   const handleSettingChange = (setting: string, value: any) => {
     toast({
@@ -213,7 +246,11 @@ export default function Settings() {
               </div>
               <Switch
                 id="dark-mode"
-                onCheckedChange={(checked) => handleSettingChange('Modo Escuro', checked)}
+                checked={theme === "dark"}
+                onCheckedChange={(checked) => {
+                  setTheme(checked ? "dark" : "light");
+                  handleSettingChange('Modo Escuro', checked);
+                }}
               />
             </div>
 
@@ -405,6 +442,57 @@ export default function Settings() {
                     Contas com o mesmo nome serão consideradas a mesma conta.
                   </p>
                 </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Data Management */}
+        <Card className="bg-gradient-card shadow-medium">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5" />
+              Gerenciar Dados
+            </CardTitle>
+            <CardDescription>
+              Limpe todos os seus dados permanentemente
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+                <h4 className="font-medium text-destructive mb-2">Zona de Perigo</h4>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Esta ação irá remover permanentemente todas as suas transações, contas, 
+                  metas de economia, datas especiais e anotações mensais. Esta ação não pode ser desfeita.
+                </p>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" disabled={isClearing}>
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      {isClearing ? "Limpando..." : "Limpar Todos os Dados"}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Você tem certeza absoluta?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Esta ação não pode ser desfeita. Isso irá remover permanentemente
+                        todas as suas transações, contas, metas de economia, datas especiais
+                        e anotações mensais.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction
+                        className="bg-destructive hover:bg-destructive/90"
+                        onClick={handleClearAllData}
+                      >
+                        Sim, limpar todos os dados
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             </div>
           </CardContent>
