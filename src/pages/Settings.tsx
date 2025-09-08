@@ -163,51 +163,70 @@ export default function Settings() {
       let createdAccounts = 0;
       let createdCategories = 0;
 
+      // Helpers to normalize comparisons (ignore accents/case/extra spaces)
+      const normalize = (v: any) =>
+        String(v ?? "")
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase()
+          .trim();
+
+      const normalizeType = (t: any) => {
+        const v = String(t ?? "").toLowerCase().trim();
+        return v === "income" ? "income" : "expense";
+      };
+
       for (const row of dataRows) {
-        const [description, amount, date, type, categoryName, accountName, paymentType] = row;
-        
-        if (!description || !amount || !date || !type || !categoryName || !accountName) {
+        const [description, amount, date, typeRaw, categoryNameRaw, accountNameRaw, paymentType] = row;
+
+        const desc = String(description ?? "").trim();
+        const amt = String(amount ?? "").trim();
+        const dt = String(date ?? "").trim();
+        const type = normalizeType(typeRaw) as 'income' | 'expense';
+        const categoryName = String(categoryNameRaw ?? "").trim();
+        const accountName = String(accountNameRaw ?? "").trim();
+
+        if (!desc || !amt || !dt || !type || !categoryName || !accountName) {
           continue; // Skip invalid lines
         }
 
-        // Find or create account
-        let account = accounts.find(a => a.name.toLowerCase() === String(accountName).toLowerCase());
+        const accountKey = normalize(accountName);
+        const categoryKey = normalize(categoryName);
+
+        // Find or create account (always check latest store state)
+        let currentAccounts = useFinanceStore.getState().accounts;
+        let account = currentAccounts.find(a => normalize(a.name) === accountKey);
         if (!account) {
           await addAccount({
-            name: String(accountName),
+            name: accountName,
             balance: 0,
-            type: 'checking' as const
+            type: 'checking' as const,
           });
           createdAccounts++;
           // Refresh accounts list after adding
-          const updatedAccounts = useFinanceStore.getState().accounts;
-          account = updatedAccounts.find(a => a.name.toLowerCase() === String(accountName).toLowerCase());
+          currentAccounts = useFinanceStore.getState().accounts;
+          account = currentAccounts.find(a => normalize(a.name) === accountKey);
         }
 
-        // Find or create category
-        let category = categories.find(c => 
-          c.name.toLowerCase() === String(categoryName).toLowerCase() && 
-          c.type === type
-        );
-        
+        // Find or create category (match by normalized name and type, with latest state)
+        let currentCategories = useFinanceStore.getState().categories;
+        let category = currentCategories.find(c => normalize(c.name) === categoryKey && c.type === type);
+
         if (!category) {
           // Create new category
           const colors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#F97316', '#06B6D4', '#84CC16'];
           const randomColor = colors[Math.floor(Math.random() * colors.length)];
-          
+
           await addCategory({
-            name: String(categoryName),
-            type: type as 'income' | 'expense',
-            color: randomColor
+            name: categoryName,
+            type,
+            color: randomColor,
           });
           createdCategories++;
-          
+
           // Refresh categories list after adding
-          const updatedCategories = useFinanceStore.getState().categories;
-          category = updatedCategories.find(c => 
-            c.name.toLowerCase() === String(categoryName).toLowerCase() && 
-            c.type === type
-          );
+          currentCategories = useFinanceStore.getState().categories;
+          category = currentCategories.find(c => normalize(c.name) === categoryKey && c.type === type);
         }
 
         if (!account || !category) {
@@ -215,15 +234,15 @@ export default function Settings() {
         }
 
         await addTransaction({
-          description: String(description),
-          amount: parseFloat(String(amount)),
-          date: String(date),
-          type: type as 'income' | 'expense',
+          description: desc,
+          amount: parseFloat(amt),
+          date: dt,
+          type,
           categoryId: category.id,
           accountId: account.id,
-          paymentType: (paymentType && ['single', 'monthly', 'recurring'].includes(String(paymentType))) 
-            ? paymentType as 'single' | 'monthly' | 'recurring' 
-            : 'single'
+          paymentType: (paymentType && ['single', 'monthly', 'recurring'].includes(String(paymentType)))
+            ? (paymentType as 'single' | 'monthly' | 'recurring')
+            : 'single',
         });
 
         importedCount++;
