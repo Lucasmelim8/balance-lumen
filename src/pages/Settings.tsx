@@ -26,11 +26,12 @@ import { useToast } from '@/hooks/use-toast';
 import { useFinanceStore } from '@/store/financeStore';
 import { useTheme } from '@/components/layout/ThemeProvider';
 import { useRef, useState } from 'react';
+import * as XLSX from 'xlsx';
 
 export default function Settings() {
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
-  const { transactions, categories, accounts, addTransaction, addAccount, clearAllData } = useFinanceStore();
+  const { transactions, categories, accounts, addTransaction, addAccount, addCategory, clearAllData } = useFinanceStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isClearing, setIsClearing] = useState(false);
 
@@ -68,16 +69,15 @@ export default function Settings() {
       ['Aluguel', '1200', '2024-01-05', 'expense', 'Moradia', 'Conta Corrente', 'monthly']
     ];
 
-    const csvContent = template.map(row => row.join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'modelo_transacoes.csv');
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Criar workbook XLSX
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(template);
+    
+    // Adicionar worksheet ao workbook
+    XLSX.utils.book_append_sheet(wb, ws, "Transações");
+    
+    // Fazer o download com codificação UTF-8
+    XLSX.writeFile(wb, 'modelo_transacoes.xlsx');
     
     toast({
       title: "Modelo baixado",
@@ -102,7 +102,7 @@ export default function Settings() {
       
       return [
         transaction.description,
-        transaction.amount.toString(),
+        transaction.amount,
         transaction.date,
         transaction.type,
         category?.name || 'Categoria não encontrada',
@@ -111,16 +111,15 @@ export default function Settings() {
       ];
     });
 
-    const csvContent = [header, ...data].map(row => row.join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'transacoes_exportadas.csv');
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Criar workbook XLSX
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([header, ...data]);
+    
+    // Adicionar worksheet ao workbook
+    XLSX.utils.book_append_sheet(wb, ws, "Transações");
+    
+    // Fazer o download com codificação UTF-8
+    XLSX.writeFile(wb, 'transacoes_exportadas.xlsx');
 
     toast({
       title: "Transações exportadas",
@@ -133,10 +132,23 @@ export default function Settings() {
     if (!file) return;
 
     try {
-      const text = await file.text();
-      const lines = text.split('\n').filter(line => line.trim());
+      let data: any[][] = [];
       
-      if (lines.length < 2) {
+      if (file.type.includes('sheet') || file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+        // Processar arquivo XLSX
+        const arrayBuffer = await file.arrayBuffer();
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+      } else {
+        // Processar arquivo CSV (backwards compatibility)
+        const text = await file.text();
+        const lines = text.split('\n').filter(line => line.trim());
+        data = lines.map(line => line.split(',').map(cell => cell.trim()));
+      }
+      
+      if (data.length < 2) {
         toast({
           title: "Arquivo inválido",
           description: "O arquivo deve conter pelo menos um cabeçalho e uma linha de dados",
@@ -146,49 +158,70 @@ export default function Settings() {
       }
 
       // Skip header line
-      const dataLines = lines.slice(1);
+      const dataRows = data.slice(1);
       let importedCount = 0;
       let createdAccounts = 0;
+      let createdCategories = 0;
 
-      for (const line of dataLines) {
-        const [description, amount, date, type, categoryName, accountName, paymentType] = line.split(',').map(s => s.trim());
+      for (const row of dataRows) {
+        const [description, amount, date, type, categoryName, accountName, paymentType] = row;
         
         if (!description || !amount || !date || !type || !categoryName || !accountName) {
           continue; // Skip invalid lines
         }
 
         // Find or create account
-        let account = accounts.find(a => a.name.toLowerCase() === accountName.toLowerCase());
+        let account = accounts.find(a => a.name.toLowerCase() === String(accountName).toLowerCase());
         if (!account) {
           await addAccount({
-            name: accountName,
+            name: String(accountName),
             balance: 0,
             type: 'checking' as const
           });
           createdAccounts++;
           // Refresh accounts list after adding
           const updatedAccounts = useFinanceStore.getState().accounts;
-          account = updatedAccounts.find(a => a.name.toLowerCase() === accountName.toLowerCase());
+          account = updatedAccounts.find(a => a.name.toLowerCase() === String(accountName).toLowerCase());
         }
 
-        // Find category
-        const category = categories.find(c => 
-          c.name.toLowerCase() === categoryName.toLowerCase() && 
+        // Find or create category
+        let category = categories.find(c => 
+          c.name.toLowerCase() === String(categoryName).toLowerCase() && 
           c.type === type
         );
+        
+        if (!category) {
+          // Create new category
+          const colors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#F97316', '#06B6D4', '#84CC16'];
+          const randomColor = colors[Math.floor(Math.random() * colors.length)];
+          
+          await addCategory({
+            name: String(categoryName),
+            type: type as 'income' | 'expense',
+            color: randomColor
+          });
+          createdCategories++;
+          
+          // Refresh categories list after adding
+          const updatedCategories = useFinanceStore.getState().categories;
+          category = updatedCategories.find(c => 
+            c.name.toLowerCase() === String(categoryName).toLowerCase() && 
+            c.type === type
+          );
+        }
 
         if (!account || !category) {
-          continue; // Skip if account creation failed or category not found
+          continue; // Skip if account or category creation failed
         }
 
         await addTransaction({
-          description,
-          amount: parseFloat(amount),
-          date,
+          description: String(description),
+          amount: parseFloat(String(amount)),
+          date: String(date),
           type: type as 'income' | 'expense',
           categoryId: category.id,
           accountId: account.id,
-          paymentType: (paymentType && ['single', 'monthly', 'recurring'].includes(paymentType)) 
+          paymentType: (paymentType && ['single', 'monthly', 'recurring'].includes(String(paymentType))) 
             ? paymentType as 'single' | 'monthly' | 'recurring' 
             : 'single'
         });
@@ -196,9 +229,13 @@ export default function Settings() {
         importedCount++;
       }
 
+      let message = `${importedCount} transações importadas`;
+      if (createdAccounts > 0) message += `, ${createdAccounts} contas criadas`;
+      if (createdCategories > 0) message += `, ${createdCategories} categorias criadas`;
+
       toast({
         title: "Importação concluída",
-        description: `${importedCount} transações importadas${createdAccounts > 0 ? ` e ${createdAccounts} contas criadas` : ''}`,
+        description: message,
       });
 
       // Reset file input
@@ -414,7 +451,7 @@ export default function Settings() {
                 <div className="space-y-3">
                   <Button onClick={downloadTemplate} variant="outline" className="w-full">
                     <FileSpreadsheet className="mr-2 h-4 w-4" />
-                    Baixar Modelo CSV
+                    Baixar Modelo Excel
                   </Button>
                   
                   <div className="relative">
