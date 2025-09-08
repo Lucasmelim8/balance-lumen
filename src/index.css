@@ -99,6 +99,7 @@ All colors MUST be HSL.
     --border: 0 0% 15%;
     --input: 0 0% 15%;
     --ring: 217 91% 60%;
+    
     --sidebar-background: 0 0% 12%;
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 217 91% 60%;
@@ -107,6 +108,12 @@ All colors MUST be HSL.
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 0 0% 20%;
     --sidebar-ring: 217 91% 60%;
+    
+    /* Dark mode gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%), hsl(217 91% 70%));
+    --gradient-success: linear-gradient(135deg, hsl(142 69% 45%), hsl(142 69% 55%));
+    --gradient-destructive: linear-gradient(135deg, hsl(0 84% 60%), hsl(0 84% 70%));
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 8%), hsl(0 0% 12%));
   }
 }
 
