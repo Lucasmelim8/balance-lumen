@@ -148,14 +148,14 @@ export default function Home() {
     const accountData = {
       name: accountFormData.name,
       type: accountFormData.type as 'checking' | 'savings' | 'credit',
-      balance: accountFormData.balance,
+      balance: parseFloat(String(accountFormData.balance)) || 0,
     };
 
     try {
       if (currentAccount) {
         // Verificar se o saldo mudou para criar transação de ajuste
-        const oldBalance = currentAccount.balance;
-        const newBalance = accountFormData.balance;
+        const oldBalance = parseFloat(String(currentAccount.balance)) || 0;
+        const newBalance = parseFloat(String(accountFormData.balance)) || 0;
         const balanceDifference = newBalance - oldBalance;
 
         await updateAccount(currentAccount.id, accountData);
@@ -238,7 +238,8 @@ export default function Home() {
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
-    setAccountFormData(prev => ({ ...prev, [name]: value }));
+    const processedValue = name === 'balance' ? parseFloat(value) || 0 : value;
+    setAccountFormData(prev => ({ ...prev, [name]: processedValue }));
   };
 
   const handleSelectChange = (value: 'checking' | 'savings' | 'credit') => {
