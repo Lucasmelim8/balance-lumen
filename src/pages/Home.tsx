@@ -72,6 +72,8 @@ export default function Home() {
     addAccount,   // Assumindo que essas funções existem no seu store
     updateAccount, // Assumindo que essas funções existem no seu store
     removeAccount, // Corrigido: deleteAccount -> removeAccount
+    addTransaction,
+    addCategory,
   } = useFinanceStore();
 
   // Estados locais para controle dos modais e formulários
@@ -151,7 +153,48 @@ export default function Home() {
 
     try {
       if (currentAccount) {
+        // Verificar se o saldo mudou para criar transação de ajuste
+        const oldBalance = currentAccount.balance;
+        const newBalance = accountFormData.balance;
+        const balanceDifference = newBalance - oldBalance;
+
         await updateAccount(currentAccount.id, accountData);
+
+        // Se houve mudança no saldo, criar transação de reajuste
+        if (balanceDifference !== 0) {
+          // Buscar ou criar categoria "Reajuste"
+          let adjustmentCategory = categories.find(c => 
+            c.name.toLowerCase() === 'reajuste' && 
+            c.type === (balanceDifference > 0 ? 'income' : 'expense')
+          );
+
+          if (!adjustmentCategory) {
+            await addCategory({
+              name: 'Reajuste',
+              type: balanceDifference > 0 ? 'income' : 'expense',
+              color: '#6B7280',
+            });
+            // Recarregar categorias para obter a nova
+            const updatedCategories = useFinanceStore.getState().categories;
+            adjustmentCategory = updatedCategories.find(c => 
+              c.name.toLowerCase() === 'reajuste' && 
+              c.type === (balanceDifference > 0 ? 'income' : 'expense')
+            );
+          }
+
+          if (adjustmentCategory) {
+            await addTransaction({
+              description: `Reajuste de saldo - ${currentAccount.name}`,
+              amount: Math.abs(balanceDifference),
+              date: new Date().toISOString(),
+              type: balanceDifference > 0 ? 'income' : 'expense',
+              categoryId: adjustmentCategory.id,
+              accountId: currentAccount.id,
+              paymentType: 'single',
+            });
+          }
+        }
+
         toast({
           title: "Sucesso",
           description: "Conta atualizada com sucesso!",

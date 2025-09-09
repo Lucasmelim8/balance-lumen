@@ -85,10 +85,14 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon" className="bg-sidebar-background border-r border-sidebar-border flex flex-col">
       <SidebarHeader className="flex h-16 items-center justify-center border-b px-3">
-        <div className={cn("flex items-center gap-2 font-bold text-sidebar-foreground", isCollapsed && "hidden")}>
+        {isCollapsed ? (
+          <PiggyBank className="h-6 w-6 text-sidebar-primary" />
+        ) : (
+          <div className="flex items-center gap-2 font-bold text-sidebar-foreground">
             <PiggyBank className="h-6 w-6 text-sidebar-primary" />
             <span className="text-base whitespace-nowrap">Balance Lumen</span>
-        </div>
+          </div>
+        )}
       </SidebarHeader>
 
       <SidebarContent className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
