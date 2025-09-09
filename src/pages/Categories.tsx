@@ -46,13 +46,14 @@ const colorOptions = [
 ];
 
 export default function Categories() {
-  const { categories, addCategory, updateCategory, removeCategory } = useFinanceStore();
+  const { categories, transactions, addCategory, updateCategory, removeCategory, removeTransaction } = useFinanceStore();
   const { toast } = useToast();
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<any>(null);
+  const [relatedTransactionsCount, setRelatedTransactionsCount] = useState(0);
   const [formData, setFormData] = useState({
     name: '',
     type: 'expense' as 'income' | 'expense',
@@ -105,19 +106,40 @@ export default function Categories() {
   };
 
   const handleDelete = (category: any) => {
+    const relatedCount = transactions.filter(t => t.categoryId === category.id).length;
     setCategoryToDelete(category);
+    setRelatedTransactionsCount(relatedCount);
     setIsDeleteConfirmOpen(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async (deleteTransactions = false) => {
     if (categoryToDelete) {
-      removeCategory(categoryToDelete.id);
-      toast({
-        title: "Categoria removida",
-        description: "A categoria foi removida com sucesso",
-      });
-      setIsDeleteConfirmOpen(false);
-      setCategoryToDelete(null);
+      try {
+        // Se escolheu excluir transações, excluir todas relacionadas primeiro
+        if (deleteTransactions) {
+          const relatedTransactions = transactions.filter(t => t.categoryId === categoryToDelete.id);
+          for (const transaction of relatedTransactions) {
+            await removeTransaction(transaction.id);
+          }
+        }
+        
+        removeCategory(categoryToDelete.id);
+        toast({
+          title: "Categoria removida",
+          description: deleteTransactions 
+            ? "Categoria e transações relacionadas removidas com sucesso" 
+            : "A categoria foi removida com sucesso",
+        });
+        setIsDeleteConfirmOpen(false);
+        setCategoryToDelete(null);
+        setRelatedTransactionsCount(0);
+      } catch (error) {
+        toast({
+          title: "Erro",
+          description: "Ocorreu um erro ao remover a categoria.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -332,15 +354,42 @@ export default function Categories() {
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
             <AlertDialogDescription>
-              Você tem certeza que deseja excluir a categoria "{categoryToDelete?.name}"? 
-              Esta ação não pode ser desfeita e pode afetar transações existentes.
+              {relatedTransactionsCount > 0 ? (
+                <>
+                  A categoria "{categoryToDelete?.name}" possui {relatedTransactionsCount} transação(ões) relacionada(s).
+                  <br /><br />
+                  Escolha uma opção:
+                </>
+              ) : (
+                `Você tem certeza que deseja excluir a categoria "${categoryToDelete?.name}"? Esta ação não pode ser desfeita.`
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Excluir
-            </AlertDialogAction>
+            {relatedTransactionsCount > 0 ? (
+              <>
+                <AlertDialogAction 
+                  onClick={() => confirmDelete(false)}
+                  className="bg-orange-500 text-white hover:bg-orange-600"
+                >
+                  Excluir apenas categoria
+                </AlertDialogAction>
+                <AlertDialogAction 
+                  onClick={() => confirmDelete(true)} 
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Excluir categoria e {relatedTransactionsCount} transação(ões)
+                </AlertDialogAction>
+              </>
+            ) : (
+              <AlertDialogAction 
+                onClick={() => confirmDelete(false)} 
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Excluir
+              </AlertDialogAction>
+            )}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

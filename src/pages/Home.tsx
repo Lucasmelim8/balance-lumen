@@ -37,7 +37,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useFinanceStore } from '@/store/financeStore';
-import { toast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 // Mock de dados para o tipo de conta, caso não venha do store
 const accountTypes = [
@@ -74,12 +74,14 @@ export default function Home() {
     removeAccount, // Corrigido: deleteAccount -> removeAccount
     addTransaction,
     addCategory,
+    removeTransaction,
   } = useFinanceStore();
 
   // Estados locais para controle dos modais e formulários
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [currentAccount, setCurrentAccount] = useState(null);
+  const [relatedTransactionsCount, setRelatedTransactionsCount] = useState(0);
   const [accountFormData, setAccountFormData] = useState<{
     name: string;
     type: 'checking' | 'savings' | 'credit' | '';
@@ -95,6 +97,7 @@ export default function Home() {
   const totalIncome = getTotalIncome();
   const totalExpenses = getTotalExpenses();
   const recentTransactions = transactions.slice(-5).reverse();
+  const { toast } = useToast();
 
   // Ações rápidas
   const quickActions = [
@@ -131,7 +134,9 @@ export default function Home() {
   };
 
   const handleOpenDeleteConfirm = (account) => {
+    const relatedCount = transactions.filter(t => t.accountId === account.id).length;
     setCurrentAccount(account);
+    setRelatedTransactionsCount(relatedCount);
     setIsDeleteConfirmOpen(true);
   };
 
@@ -222,13 +227,23 @@ export default function Home() {
     }
   };
 
-  const handleDeleteConfirm = async () => {
+  const handleDeleteConfirm = async (deleteTransactions = false) => {
     if (currentAccount) {
       try {
+        // Se escolheu excluir transações, excluir todas relacionadas primeiro
+        if (deleteTransactions) {
+          const relatedTransactions = transactions.filter(t => t.accountId === currentAccount.id);
+          for (const transaction of relatedTransactions) {
+            await removeTransaction(transaction.id);
+          }
+        }
+        
         await removeAccount(currentAccount.id);
         toast({
           title: "Sucesso",
-          description: "Conta excluída com sucesso!",
+          description: deleteTransactions 
+            ? "Conta e transações relacionadas excluídas com sucesso!" 
+            : "Conta excluída com sucesso!",
         });
       } catch (error) {
         toast({
@@ -240,6 +255,7 @@ export default function Home() {
     }
     setIsDeleteConfirmOpen(false);
     setCurrentAccount(null);
+    setRelatedTransactionsCount(0);
   };
 
   const handleFormChange = (e) => {
@@ -483,14 +499,48 @@ export default function Home() {
           <DialogHeader>
             <DialogTitle>Confirmar Exclusão</DialogTitle>
             <DialogDescription>
-              Você tem certeza que deseja excluir a conta "{currentAccount?.name}"? Esta ação não pode ser desfeita.
+              {relatedTransactionsCount > 0 ? (
+                <>
+                  A conta "{currentAccount?.name}" possui {relatedTransactionsCount} transação(ões) relacionada(s).
+                  <br /><br />
+                  Escolha uma opção:
+                </>
+              ) : (
+                `Você tem certeza que deseja excluir a conta "${currentAccount?.name}"? Esta ação não pode ser desfeita.`
+              )}
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
             <DialogClose asChild>
               <Button type="button" variant="secondary">Cancelar</Button>
             </DialogClose>
-            <Button type="button" variant="destructive" onClick={handleDeleteConfirm}>Excluir</Button>
+            {relatedTransactionsCount > 0 ? (
+              <>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => handleDeleteConfirm(false)}
+                  className="text-destructive hover:text-destructive"
+                >
+                  Excluir apenas conta
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="destructive" 
+                  onClick={() => handleDeleteConfirm(true)}
+                >
+                  Excluir conta e {relatedTransactionsCount} transação(ões)
+                </Button>
+              </>
+            ) : (
+              <Button 
+                type="button" 
+                variant="destructive" 
+                onClick={() => handleDeleteConfirm(false)}
+              >
+                Excluir
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
