@@ -145,18 +145,18 @@ export default function Home() {
       return;
     }
 
-    const accountData = {
-      name: accountFormData.name,
-      type: accountFormData.type as 'checking' | 'savings' | 'credit',
-      balance: parseFloat(String(accountFormData.balance)) || 0,
-    };
-
     try {
       if (currentAccount) {
         // Verificar se o saldo mudou para criar transação de ajuste
         const oldBalance = parseFloat(String(currentAccount.balance)) || 0;
         const newBalance = parseFloat(String(accountFormData.balance)) || 0;
         const balanceDifference = newBalance - oldBalance;
+
+        // Atualizar apenas nome e tipo da conta (não o saldo)
+        const accountData = {
+          name: accountFormData.name,
+          type: accountFormData.type as 'checking' | 'savings' | 'credit',
+        };
 
         await updateAccount(currentAccount.id, accountData);
 
@@ -200,6 +200,12 @@ export default function Home() {
           description: "Conta atualizada com sucesso!",
         });
       } else {
+        const accountData = {
+          name: accountFormData.name,
+          type: accountFormData.type as 'checking' | 'savings' | 'credit',
+          balance: parseFloat(String(accountFormData.balance)) || 0,
+        };
+        
         await addAccount(accountData);
         toast({
           title: "Sucesso",
