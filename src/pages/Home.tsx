@@ -498,50 +498,26 @@ export default function Home() {
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Confirmar Exclusão</DialogTitle>
-            <DialogDescription>
-              {relatedTransactionsCount > 0 ? (
-                <>
-                  A conta "{currentAccount?.name}" possui {relatedTransactionsCount} transação(ões) relacionada(s).
-                  <br /><br />
-                  Escolha uma opção:
-                </>
-              ) : (
-                `Você tem certeza que deseja excluir a conta "${currentAccount?.name}"? Esta ação não pode ser desfeita.`
-              )}
-            </DialogDescription>
+             <DialogDescription>
+               {relatedTransactionsCount > 0 ? (
+                 `Você tem certeza que deseja excluir a conta "${currentAccount?.name}" e suas ${relatedTransactionsCount} transação(ões)? Esta ação não pode ser desfeita.`
+               ) : (
+                 `Você tem certeza que deseja excluir a conta "${currentAccount?.name}"? Esta ação não pode ser desfeita.`
+               )}
+             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <DialogClose asChild>
-              <Button type="button" variant="secondary">Cancelar</Button>
-            </DialogClose>
-            {relatedTransactionsCount > 0 ? (
-              <>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => handleDeleteConfirm(false)}
-                  className="text-destructive hover:text-destructive"
-                >
-                  Excluir apenas conta
-                </Button>
-                <Button 
-                  type="button" 
-                  variant="destructive" 
-                  onClick={() => handleDeleteConfirm(true)}
-                >
-                  Excluir conta e {relatedTransactionsCount} transação(ões)
-                </Button>
-              </>
-            ) : (
-              <Button 
-                type="button" 
-                variant="destructive" 
-                onClick={() => handleDeleteConfirm(false)}
-              >
-                Excluir
-              </Button>
-            )}
-          </DialogFooter>
+           <DialogFooter>
+             <DialogClose asChild>
+               <Button type="button" variant="secondary">Cancelar</Button>
+             </DialogClose>
+             <Button 
+               type="button" 
+               variant="destructive" 
+               onClick={() => handleDeleteConfirm(true)}
+             >
+               Excluir
+             </Button>
+           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

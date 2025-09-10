@@ -355,41 +355,20 @@ export default function Categories() {
             <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
             <AlertDialogDescription>
               {relatedTransactionsCount > 0 ? (
-                <>
-                  A categoria "{categoryToDelete?.name}" possui {relatedTransactionsCount} transação(ões) relacionada(s).
-                  <br /><br />
-                  Escolha uma opção:
-                </>
+                `Você tem certeza que deseja excluir a categoria "${categoryToDelete?.name}" e suas ${relatedTransactionsCount} transação(ões)? Esta ação não pode ser desfeita.`
               ) : (
                 `Você tem certeza que deseja excluir a categoria "${categoryToDelete?.name}"? Esta ação não pode ser desfeita.`
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+          <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            {relatedTransactionsCount > 0 ? (
-              <>
-                <AlertDialogAction 
-                  onClick={() => confirmDelete(false)}
-                  className="bg-orange-500 text-white hover:bg-orange-600"
-                >
-                  Excluir apenas categoria
-                </AlertDialogAction>
-                <AlertDialogAction 
-                  onClick={() => confirmDelete(true)} 
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                >
-                  Excluir categoria e {relatedTransactionsCount} transação(ões)
-                </AlertDialogAction>
-              </>
-            ) : (
-              <AlertDialogAction 
-                onClick={() => confirmDelete(false)} 
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                Excluir
-              </AlertDialogAction>
-            )}
+            <AlertDialogAction 
+              onClick={() => confirmDelete(true)} 
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
