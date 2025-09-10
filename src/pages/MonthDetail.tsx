@@ -342,6 +342,18 @@ export default function MonthDetail() {
                 </Card>
             </div>
             <div className="lg:col-span-1 space-y-6">
+                <Card>
+                    <CardHeader><CardTitle className="flex items-center gap-2"><StickyNote className="h-5 w-5"/>Anotações do Mês</CardTitle></CardHeader>
+                    <CardContent className="space-y-2">
+                        <Textarea
+                            placeholder="Adicione suas anotações para este mês..." 
+                            rows={5}
+                            value={noteContent}
+                            onChange={(e) => setNoteContent(e.target.value)}
+                        />
+                        <Button onClick={handleSaveNote} className="w-full">Salvar Anotação</Button>
+                    </CardContent>
+                </Card>
                 {relevantSpecialDates.length > 0 && (
                     <Card>
                         <CardHeader>
@@ -383,18 +395,6 @@ export default function MonthDetail() {
                         </CardContent>
                     </Card>
                 )}
-                <Card>
-                    <CardHeader><CardTitle className="flex items-center gap-2"><StickyNote className="h-5 w-5"/>Anotações do Mês</CardTitle></CardHeader>
-                    <CardContent className="space-y-2">
-                        <Textarea
-                            placeholder="Adicione suas anotações para este mês..." 
-                            rows={5}
-                            value={noteContent}
-                            onChange={(e) => setNoteContent(e.target.value)}
-                        />
-                        <Button onClick={handleSaveNote} className="w-full">Salvar Anotação</Button>
-                    </CardContent>
-                </Card>
             </div>
         </div>
     </div>
