@@ -259,7 +259,7 @@ export default function MonthDetail() {
                                             placeholder="0,00"
                                             defaultValue={categoryGoals[weekIndex] || ''}
                                             onChange={(e) => handleGoalChange(cat.id, weekIndex, e.target.value)}
-                                            className="h-8 w-24 text-right ml-auto"
+                                            className="h-6 w-16 text-xs text-right border-0 bg-transparent p-1"
                                         />
                                         ) : (
                                         formatCurrency(categoryGoals[weekIndex] || 0)
@@ -273,7 +273,7 @@ export default function MonthDetail() {
                                             placeholder="0,00"
                                             defaultValue={monthlyGoal || ''}
                                             onChange={(e) => handleMonthlyGoalChange(cat.id, e.target.value)}
-                                            className="h-8 w-24 text-right ml-auto"
+                                            className="h-6 w-16 text-xs text-right border-0 bg-transparent p-1"
                                         />
                                         ) : (
                                         formatCurrency(monthlyGoal || 0)
