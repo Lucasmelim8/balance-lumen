@@ -54,84 +54,141 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/30 p-4">
-      <Card className="w-full max-w-md shadow-large bg-gradient-card">
-        <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-            ExpenseTracker
-          </CardTitle>
-          <CardDescription>
-            Entre com suas credenciais para acessar sua conta
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="seu@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={isLoading}
-              />
+    <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-muted/30">
+      {/* Navigation Header */}
+      <nav className="flex items-center justify-between p-6">
+        <div className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+          ExpenseTracker
+        </div>
+        <div className="flex gap-4">
+          <Link 
+            to="/register" 
+            className="text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Criar conta
+          </Link>
+        </div>
+      </nav>
+
+      <div className="container mx-auto px-4">
+        {/* Hero Section */}
+        <div className="grid lg:grid-cols-2 gap-12 items-center min-h-[calc(100vh-80px)]">
+          <div className="space-y-8">
+            <div className="space-y-4">
+              <h1 className="text-4xl lg:text-6xl font-bold leading-tight">
+                Controle suas{" "}
+                <span className="bg-gradient-primary bg-clip-text text-transparent">
+                  finanças
+                </span>{" "}
+                com facilidade
+              </h1>
+              <p className="text-xl text-muted-foreground leading-relaxed">
+                Organize suas receitas e despesas, defina metas de gastos e acompanhe 
+                seu progresso financeiro de forma simples e intuitiva.
+              </p>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Sua senha"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  disabled={isLoading}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                  onClick={() => setShowPassword(!showPassword)}
-                  disabled={isLoading}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </Button>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-primary">📊</div>
+                <div className="text-sm font-medium">Relatórios</div>
+                <div className="text-xs text-muted-foreground">Detalhados</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-primary">🎯</div>
+                <div className="text-sm font-medium">Metas</div>
+                <div className="text-xs text-muted-foreground">Personalizadas</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-primary">💰</div>
+                <div className="text-sm font-medium">Poupança</div>
+                <div className="text-xs text-muted-foreground">Inteligente</div>
               </div>
             </div>
-            <Button 
-              type="submit" 
-              className="w-full bg-gradient-primary hover:opacity-90 transition-opacity"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-              ) : (
-                <>
-                  <LogIn className="mr-2 h-4 w-4" />
-                  Entrar
-                </>
-              )}
-            </Button>
-            <div className="text-center text-sm">
-              <span className="text-muted-foreground">Não tem uma conta? </span>
-              <Link 
-                to="/register" 
-                className="font-medium text-primary hover:underline"
-              >
-                Registre-se
-              </Link>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+          </div>
+
+          {/* Login Form */}
+          <div className="flex justify-center lg:justify-end">
+            <Card className="w-full max-w-md shadow-large bg-gradient-card">
+              <CardHeader className="space-y-1 text-center">
+                <CardTitle className="text-2xl font-bold">
+                  Faça seu login
+                </CardTitle>
+                <CardDescription>
+                  Entre com suas credenciais para acessar sua conta
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="seu@email.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      disabled={isLoading}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Senha</Label>
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder="Sua senha"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        disabled={isLoading}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                        onClick={() => setShowPassword(!showPassword)}
+                        disabled={isLoading}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                  <Button 
+                    type="submit" 
+                    className="w-full bg-gradient-primary hover:opacity-90 transition-opacity"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    ) : (
+                      <>
+                        <LogIn className="mr-2 h-4 w-4" />
+                        Entrar
+                      </>
+                    )}
+                  </Button>
+                  <div className="text-center text-sm">
+                    <span className="text-muted-foreground">Não tem uma conta? </span>
+                    <Link 
+                      to="/register" 
+                      className="font-medium text-primary hover:underline"
+                    >
+                      Registre-se
+                    </Link>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

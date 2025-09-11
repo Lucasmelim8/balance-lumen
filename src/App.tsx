@@ -31,11 +31,11 @@ const App = () => (
           <BrowserRouter>
         <Routes>
           {/* Public routes */}
-          <Route path="/login" element={<Login />} />
+          <Route path="/" element={<Login />} />
+          <Route path="/login" element={<Navigate to="/" replace />} />
           <Route path="/register" element={<Register />} />
           
           {/* Protected routes */}
-          <Route path="/" element={<Navigate to="/home" replace />} />
           <Route path="/home" element={
             <AuthGuard>
               <MainLayout>
